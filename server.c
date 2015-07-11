@@ -70,13 +70,7 @@ int main(int argc, char * argv[])
 
         int num = my_read(rec_sock, buf, 100);
         my_write(rec_sock, buf, num);
-        /*
-        while((num = read(rec_sock, buf, 100))) {
-          if(num == -1)
-            continue;
-          write(rec_sock, buf, num);
-        }
-        */
+
         close(rec_sock);  
       }
     }
