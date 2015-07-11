@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -std=c99 -pedantic -D_POSIX_C_SOURCE=200112L
-INCLUDES=-I./ -I./Common
-CPATH=./Common
+INCLUDES=-I./ -I./common
+CPATH=./common
 
 all: server
 
