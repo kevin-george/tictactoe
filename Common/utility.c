@@ -101,8 +101,14 @@ int my_socket(int domain, int type, int protocol) {
 
 int my_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
     int fd;
-    if ((fd = accept(sockfd, addr, addrlen)) == -1)
-        my_error("Socket Accept failed");
+    while((fd = accept(sockfd, addr, addrlen)) == -1) {
+        if (errno == EINTR) {
+            printf("errno = %d\n", errno);
+            continue;
+        } else {
+            my_error("Socket Accept failed");
+        }
+    }
 
     return fd;
 }
