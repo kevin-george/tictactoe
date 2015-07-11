@@ -59,14 +59,9 @@ int main(int argc, char * argv[])
     if(fork() == 0) {
       while(1) {
         rec_sock = my_accept(sockfd, (struct sockaddr *)(&recaddr), &len);
-        /*
-         * What's the purpose of this check?
-        if(rec_sock < 0) {
-          perror(": accept");
-          exit(EXIT_FAILURE);
-        }
-        */
-        printf("Client connected to child %d <machine = %s, port = %x, %x.>\n", child_id, inet_ntoa(recaddr.sin_addr), recaddr.sin_port, ntohs(recaddr.sin_port));
+
+        printf("Client connected to child %d <machine = %s, port = %x, %x.>\n", 
+          child_id, inet_ntoa(recaddr.sin_addr), recaddr.sin_port, ntohs(recaddr.sin_port));
 
         int num = my_read(rec_sock, buf, 100);
         my_write(rec_sock, buf, num);
