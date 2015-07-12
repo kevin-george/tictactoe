@@ -14,8 +14,9 @@
 
 #include "utility.h"
 
-const int CLIENT_SIZE = 20;
+#define CLIENT_SIZE 20
 int child_id = 0;
+
 
 void sig_chld(int signo) {
     pid_t pid;
@@ -36,7 +37,6 @@ int main(int argc, char * argv[]) {
     fd_set rset, allset;
     socklen_t clilen;
 
-
     abc.sa_handler = sig_chld;
     sigemptyset(&abc.sa_mask);
     abc.sa_flags = 0;
@@ -44,7 +44,8 @@ int main(int argc, char * argv[]) {
     sigaction(SIGCHLD, &abc, NULL);
 
     if(argc < 2) {
-        my_log("Usage: ./server <port number>.\n");
+        printf("Usage: ./server <port number>.\n");
+        exit(1);
     }
 
     listenfd = my_socket(AF_INET, SOCK_STREAM, 0);
@@ -74,6 +75,7 @@ int main(int argc, char * argv[]) {
         if (FD_ISSET(listenfd, &rset)) {  // new client connection
             clilen = sizeof(cliaddr);
             connfd = my_accept(listenfd, (struct sockaddr *)&cliaddr, &clilen);
+            printf("client accepted: %d\n", connfd);
 
             for (i = 0; i < CLIENT_SIZE+3; ++i)   // stdin,out,err + client size
                 if (client[i] < 0) {
@@ -96,7 +98,7 @@ int main(int argc, char * argv[]) {
             if (FD_ISSET(sockfd, &rset)) {
                 if ((n = my_read(sockfd, buf, 100)) == 0) {
                     // connection closed by client 
-                    close(sockfd);
+                    my_close(sockfd);
                     FD_CLR(sockfd, &allset);
                     client[i] = -1;
                 } else
