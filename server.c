@@ -63,6 +63,7 @@ int main(int argc, char * argv[])
             }
             pipe(p2c_fd[id]); pipe(c2p_fd[id]);
             start_client(id, listenfd, recaddr, p2c_fd[id], c2p_fd[id]);
+            exit(0);
         } else if (cpid < 0) {
             my_error("fork failed");
         } else {
@@ -97,7 +98,6 @@ void start_client(int id, int listenfd, struct sockaddr_in cliaddr, int *p2c_fd,
 
 
     close(cli_sock);  
-    exit(0);
 }
 
 void help(int fd) {
