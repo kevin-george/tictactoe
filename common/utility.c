@@ -62,8 +62,15 @@ int my_read(int fd, void *vptr, size_t n) {
 
        nleft -= nread;
        ptr += nread;
-       if (*(ptr-1) == '\n') break;
+       if (*(ptr-2) == '\r') {  // Read appends \r\n 
+           *(ptr-2) = '\0';
+           break;
+       }
    }
+   char *ptr2 = vptr;
+   for (int i = 0; i < strlen(ptr2); ++i)
+       printf("%i:%c\n", i, ptr2[i]);
+   printf("size:%lu\n", strlen(ptr2));
    return (n - nleft);
 }
 

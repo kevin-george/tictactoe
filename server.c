@@ -25,7 +25,6 @@ int main(int argc, char * argv[])
     int cpid;
     struct sockaddr_in addr, recaddr;
     struct sigaction abc;
-    char buf[100];
     int p2c_fd[20][2], c2p_fd[20][2];
 
     abc.sa_handler = sig_chld;
@@ -70,13 +69,15 @@ int main(int argc, char * argv[])
             close(p2c_fd[id][0]); close(c2p_fd[id][1]);
         }
     }
-    while(1) { 
-        int i; 
-        wait(&i);
+
+    for ( ; ; ) {
+
     }
 }
 
 void start_client(int id, int listenfd, struct sockaddr_in cliaddr, int *p2c_fd, int *c2p_fd) {
+    const size_t CMD_LEN = 24;
+    char cmd[CMD_LEN];
     int cli_sock;
     socklen_t clilen = sizeof(cliaddr);
 
@@ -85,13 +86,21 @@ void start_client(int id, int listenfd, struct sockaddr_in cliaddr, int *p2c_fd,
     printf("Client connected to child %d <machine = %s, port = %x, %x.>\n", 
         id, inet_ntoa(cliaddr.sin_addr), cliaddr.sin_port, ntohs(cliaddr.sin_port));
 
+    help(cli_sock);
+
+    do {
+        // Get game command
+        int n = my_read(cli_sock, cmd, CMD_LEN); 
+
+
+    } while(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0);
 
 
     close(cli_sock);  
     exit(0);
 }
 
-void show_commands(int fd) {
+void help(int fd) {
     char str[70];
     sprintf(str, "\nCommands supported:\n"); 
     my_write(fd, str, strlen(str));
