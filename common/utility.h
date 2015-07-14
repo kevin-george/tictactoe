@@ -29,4 +29,7 @@ int my_select(int nfds, fd_set *readfds, fd_set *writefds,
 // File
 int my_close(int fd);
 
+// String
+int starts_with(char* target, const char* search);
+
 #endif
