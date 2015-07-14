@@ -1,13 +1,13 @@
 CC=gcc
 CFLAGS=-Wall -std=c99 -pedantic -D_POSIX_C_SOURCE=200112L
-INCLUDES=-I./ -I./common
+INCLUDES=-I./include
 CPATH=./common
 
-all: server
+all: server_exec
 
-server: server.c $(CPATH)/utility.c
+server_exec: server/server_parent.c server/server_child.c $(CPATH)/utility.c
 	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $@
 
 clean:
-	rm -f server
+	rm -f server_exec
 
