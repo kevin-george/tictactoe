@@ -5,7 +5,7 @@ CPATH=./common
 
 all: server_exec
 
-server_exec: server/server_parent.c server/server_child.c $(CPATH)/utility.c
+server_exec: server/server_parent.c server/server_child.c login/login.c $(CPATH)/utility.c
 	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $@
 
 clean:
