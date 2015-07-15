@@ -67,10 +67,11 @@ int my_read(int fd, void *vptr, size_t n) {
       break;
     }
   }
-  char *ptr2 = vptr;
+  /*char *ptr2 = vptr;
   for (int i = 0; i < strlen(ptr2); ++i)
     printf("%i:%c\n", i, ptr2[i]);
   printf("size:%lu\n", strlen(ptr2));
+  */ 
   return (n - nleft);
 }
 
@@ -93,6 +94,12 @@ int my_write(int fd, const void *vptr, size_t n) {
     nleft -= nwritten;
     ptr += nwritten;
   }
+/*
+  char *ptr2 = vptr;
+  for (int i = 0; i < strlen(ptr2); ++i)
+    printf("%i:%c\n", i, ptr2[i]);
+  printf("size:%lu\n", strlen(ptr2));
+*/
   return n;
 }
 

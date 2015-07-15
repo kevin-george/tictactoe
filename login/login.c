@@ -5,7 +5,7 @@
 #include "utility.h"
 
 void set_userid(char* user_id) {
-  strcpy(user_name, user_id);
+  strncpy(user_name, user_id, sizeof(char)*USERNAME_LENGTH);
 }
 
 char* get_userid() {

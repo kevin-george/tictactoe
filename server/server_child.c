@@ -2,13 +2,14 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include "server_child.h"
 #include "utility.h"
 #include "login.h"
 
-#define USERNAME_LENGTH 20
 #define CMD_LENGTH 24
+#define MSG_LENGTH 100
 
 void print_help(int fd) {
   char full_string[1500];
@@ -44,7 +45,7 @@ void print_help(int fd) {
     my_write(fd, full_string, strlen(full_string));
 }
 
-void run_command(char* command, int clientfd) {
+void run_command(char* command, int clientfd, int *p2c_fd, int *c2p_fd) {
     char message[50];
     char user_id[USERNAME_LENGTH], passwd[50];
     printf ("command:%s\n", command);
@@ -88,13 +89,15 @@ void run_command(char* command, int clientfd) {
 void start_client(int id, int listenfd, struct sockaddr_in cliaddr, 
                                           int *p2c_fd, int *c2p_fd) {
     char cmd[CMD_LENGTH];
+    char buf[20];
     int cli_sock;
-    char username[USERNMAE_LENGTH];
-    char message[100];
+    char message[MSG_LENGTH];
     int command_counter = 0;
-    char user_id[50], passwd[50];
+    char user_id[USERNAME_LENGTH], passwd[PASSWORD_LENGTH];
 
     socklen_t clilen = sizeof(cliaddr);
+
+
 
     while(true) {
         // Idle till connection is made
@@ -103,19 +106,29 @@ void start_client(int id, int listenfd, struct sockaddr_in cliaddr,
             id, inet_ntoa(cliaddr.sin_addr), cliaddr.sin_port, ntohs(cliaddr.sin_port));
 
         // Login
-        my_write(cli_sock, "\n\n\nusername(guest):", 19);
-        my_read(cli_sock, cmd, CMD_LENGTH);
+        my_write(cli_sock, "\n\n\nusername(guest): ", 20);
+        my_read(cli_sock, user_id, USERNAME_LENGTH);
         //If user didn't enter anything, we give them a guest user_id
-        if(cmd[0] == '\0') {
+        printf("checking name");
+        if(user_id[0] == '\0') {
             print_help(cli_sock);
-            strcpy(message, "\nyou login as a guest.the only command that you can use is
-                              \n'register <username> <password>'");
+            strcpy(message, "\nyou login as a guest.the only command that you can use is \
+                \n'register <username> <password>'");
             my_write(cli_sock, message, strlen(message));
             set_userid("guest");
         } else {
+            my_write(cli_sock, "password: ", 11);
+            my_read(cli_sock, passwd, PASSWORD_LENGTH);
             // The user is trying to login, authenticate who they are
             if (authenticate_user(user_id, passwd) == 0)
                 set_userid(user_id);
+            else {
+                strcpy(message, "Login failed!! \nThank you for using Online Tic-tac-toe Server.\
+                    \nSee you next time\n\n");
+                my_write(cli_sock, message, strlen(message));
+                close(cli_sock);
+                continue;
+            }
         }
 
         print_help(cli_sock);
@@ -125,12 +138,17 @@ void start_client(int id, int listenfd, struct sockaddr_in cliaddr,
             my_write(cli_sock, message, strlen(message));
             my_read(cli_sock, cmd, CMD_LENGTH);
             // user_id is set, based on their type allow them to run commands
-            if (strcmp(get_userid, "guest") == 0) {
+            if (strcmp(get_userid(), "guest") == 0) {
                 if (starts_with(cmd, "register") != 0 && (strcmp(cmd, "exit") != 0 
                                                   && strcmp(cmd, "quit") != 0)) {
-                    strcpy(message, "\nYou are not supposed to do this.
+                    strcpy(message, "\nYou are not supposed to do this. \
                                     \nYou can only use 'register <username> <password>' as guest.");
                     my_write(cli_sock, message, strlen(message));
+                } else {
+                    if (starts_with(cmd, "register") == 0) {
+                        sscanf(cmd, "%s %s %s", buf, user_id, passwd);
+                        register_user(user_id, passwd);
+                    } 
                 }
             } else {
                 run_command(cmd, cli_sock, p2c_fd, c2p_fd);
@@ -138,5 +156,7 @@ void start_client(int id, int listenfd, struct sockaddr_in cliaddr,
 
             ++command_counter;
         } while (strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0);
+
+        my_close(cli_sock);
     }
 }
