@@ -25,7 +25,7 @@ void print_help(int fd) {
     str += sprintf(str, "  %-24s # Refresh a game\n", "refresh");   
     str += sprintf(str, "  %-24s # Shout <msg> to every one online\n", "shout <msg>");
     str += sprintf(str, "  %-24s # Tell user <name> message\n", "tell <name> <msg>");
-  str += sprintf(str, "  %-24s # Comment on a game when observing\n", "kibitz <msg>");
+    str += sprintf(str, "  %-24s # Comment on a game when observing\n", "kibitz <msg>");
     str += sprintf(str, "  %-24s # Comment on a game\n", "' <msg>");
     str += sprintf(str, "  %-24s # Quiet mode, no broadcast messages\n", "quiet");
     str += sprintf(str, "  %-24s # Non-quiet mode\n", "nonquiet");
@@ -45,43 +45,43 @@ void print_help(int fd) {
 }
 
 void run_command(char* command, int clientfd) {
-  char message[50];
+    char message[50];
     char user_id[USERNAME_LENGTH], passwd[50];
     printf ("command:%s\n", command);
   
     if(starts_with(command, "register")) {
-      char* token = strtok(command, " ");
-      int counter = 0;
-      while(token != NULL) {
-          token = strtok(NULL, " ");
-          if(counter == 0)
-            strcpy(user_id, token);
-          else
-            strcpy(passwd, token);
-          counter++;
-      }
-      if(register_user(user_id, passwd) != 0) {
-          my_error("Registration Failed!");
-          strcpy(message, "\nRegistration Failed!");
-          my_write(clientfd, message, strlen(message));
-      } else {
-          strcpy(message, "\nRegistration Completed!");
-          my_write(clientfd, message, strlen(message));
-      }
+        char* token = strtok(command, " ");
+        int counter = 0;
+        while(token != NULL) {
+            token = strtok(NULL, " ");
+            if(counter == 0)
+                strcpy(user_id, token);
+            else
+                strcpy(passwd, token);
+            counter++;
+        }
+        if(register_user(user_id, passwd) != 0) {
+            my_error("Registration Failed!");
+            strcpy(message, "\nRegistration Failed!");
+            my_write(clientfd, message, strlen(message));
+        } else {
+            strcpy(message, "\nRegistration Completed!");
+            my_write(clientfd, message, strlen(message));
+        }
     } else if(strcmp(command, "who") == 0) {
-      //To be implemented
+        //To be implemented
     } else if(strcmp(command, "help") == 0) {
-      print_help(clientfd);
+        print_help(clientfd);
     } else if (strcmp(command, "tell") == 0) {
         // Check if user exists
 
             // Send parent message, 
 
         // If user doesn't exist, output message
-    }else {
-      my_error("Unsuported command!");
-      strcpy(message, "\nUnsupported Command!");
-      my_write(clientfd, message, strlen(message));
+    } else {
+        my_error("Unsuported command!");
+        strcpy(message, "\nUnsupported Command!");
+        my_write(clientfd, message, strlen(message));
     }
 }
 
@@ -108,7 +108,8 @@ void start_client(int id, int listenfd, struct sockaddr_in cliaddr,
         //If user didn't enter anything, we give them a guest user_id
         if(cmd[0] == '\0') {
             print_help(cli_sock);
-            strcpy(message, "\nyou login as a guest.the only command that you can use is\n'register <username> <password>'");
+            strcpy(message, "\nyou login as a guest.the only command that you can use is
+                              \n'register <username> <password>'");
             my_write(cli_sock, message, strlen(message));
             set_userid("guest");
         } else {
@@ -120,20 +121,22 @@ void start_client(int id, int listenfd, struct sockaddr_in cliaddr,
         print_help(cli_sock);
 
         do {  // Game loop
-          sprintf(message, "\n\n<%s: %d> ", get_userid(), command_counter);
-          my_write(cli_sock, message, strlen(message));
-          my_read(cli_sock, cmd, CMD_LENGTH);
-          // user_id is set, based on their type allow them to run commands
-          if (strcmp(get_userid, "guest") == 0) {
-            if (starts_with(cmd, "register") != 0 && (strcmp(cmd, "exit") != 0 
+            sprintf(message, "\n\n<%s: %d> ", get_userid(), command_counter);
+            my_write(cli_sock, message, strlen(message));
+            my_read(cli_sock, cmd, CMD_LENGTH);
+            // user_id is set, based on their type allow them to run commands
+            if (strcmp(get_userid, "guest") == 0) {
+                if (starts_with(cmd, "register") != 0 && (strcmp(cmd, "exit") != 0 
                                                   && strcmp(cmd, "quit") != 0)) {
-              strcpy(message, "\nYou are not supposed to do this.\nYou can only use 'register <username> <password>' as guest.");
-                my_write(cli_sock, message, strlen(message));
+                    strcpy(message, "\nYou are not supposed to do this.
+                                    \nYou can only use 'register <username> <password>' as guest.");
+                    my_write(cli_sock, message, strlen(message));
+                }
+            } else {
+                run_command(cmd, cli_sock, p2c_fd, c2p_fd);
             }
-          } else {
-            run_command(cmd, cli_sock, p2c_fd, c2p_fd);
-          }
 
-          ++command_counter;
+            ++command_counter;
         } while (strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0);
     }
+}
