@@ -20,8 +20,11 @@ void *start_client(void *arg);
 void run_command(int tid, char *cmd);
 
 // Commands
+void who_cmd(int fd);
 void print_help(int fd);
 void register_cmd(int fd, char *cmd);
+void tell_cmd(int fd, char *cmd);
+void shout_cmd(int tid, char *cmd);
 
 // Cleanup
 void close_client(int tid);

@@ -10,7 +10,7 @@
 #include "login.h"
 
 #define CMD_LENGTH 100
-#define MSG_LENGTH 100
+#define MSG_LENGTH 500
 
 void print_help(int fd) {
   char full_string[1500];
@@ -49,41 +49,97 @@ void print_help(int fd) {
 void register_cmd(int fd, char *cmd) {
     char buf[20];
     char user_id[USERID_LENGTH], passwd[PASSWORD_LENGTH];
-    char message[MSG_LENGTH];
+    char msg[MSG_LENGTH];
 
     sscanf(cmd, "%s %s %s", buf, user_id, passwd);
     if (register_user(user_id, passwd) == 0) {
-        strcpy(message, "\nRegistration Completed!");
-        my_write(fd, message, strlen(message));
+        strcpy(msg, "\nRegistration Completed!");
+        my_write(fd, msg, strlen(msg));
     } else {
-        strcpy(message, "\nRegistration Failed!");
-        my_write(fd, message, strlen(message));
+        strcpy(msg, "\nRegistration Failed!");
+        my_write(fd, msg, strlen(msg));
         my_error("Registration Failed!");
     }
 }
 
+void who_cmd(int fd) {
+    char send_msg[MSG_LENGTH];
+    char users[400] = "";
+    int num_users = 0;
+
+    for (int i = 0; i < CLIENT_SIZE; ++i) {
+        if (client[i].cli_sock != -1) {
+            strcat(users, client[i].user_id);
+            strcat(users, " ");
+            ++num_users;
+        }
+    }
+
+    sprintf(send_msg, "Total %d user(s) online:\n%s\n", num_users, users);
+    my_write(fd, send_msg, strlen(send_msg));
+}
+
+void tell_cmd(int fd, char *cmd) {
+    int i, recv_cli_sock;
+    char buf[20];
+    char recv_id[USERID_LENGTH];
+    char msg[MSG_LENGTH];
+    char send_msg[MSG_LENGTH];
+
+    sscanf(cmd, "%s %s %s", buf, recv_id, msg);
+
+    for (i = 0; i < CLIENT_SIZE; ++i) {     // check if client exists
+        if (strcmp(recv_id, client[i].user_id) == 0) {
+            recv_cli_sock = client[i].cli_sock;
+            break;
+        }
+    }
+
+    if (i == CLIENT_SIZE) {     // client does not exist
+        sprintf(msg, "User %s is not online", recv_id);
+        my_write(fd, msg, strlen(msg));
+    } else {
+        sprintf(send_msg, "%s: %s", recv_id, msg);
+        my_write(recv_cli_sock, send_msg, strlen(send_msg));
+    }
+}
+
+void shout_cmd(int tid, char *cmd) {
+    char buf[20];
+    char send_msg[MSG_LENGTH], msg[MSG_LENGTH];
+
+    // Format message
+    sscanf(cmd, "%s %s", buf, msg);
+    sprintf(send_msg, "!shout! *%s*: %s\n", client[tid].user_id, msg);
+
+    for (int i = 0; i < CLIENT_SIZE; ++i) {
+        if (client[i].cli_sock != -1) {
+            my_write(client[i].cli_sock, send_msg, strlen(send_msg));
+        }
+    }
+}
+
 void run_command(int tid, char* cmd) {
-    char message[MSG_LENGTH];
+    char msg[MSG_LENGTH];
     int cli_sock = client[tid].cli_sock;
 
-    printf ("command:%s\n", cmd);
+    //printf ("command:%s\n", cmd);
     if(starts_with(cmd, "register") == 0) {
         register_cmd(cli_sock, cmd);
     } else if(strcmp(cmd, "who") == 0) {
-        //To be implemented
+        who_cmd(cli_sock);
     } else if(strcmp(cmd, "help") == 0) {
         print_help(cli_sock);
-    } else if (strcmp(cmd, "tell") == 0) {
-        // Check if user exists
-
-            // Send parent message, 
-
-        // If user doesn't exist, output message
+    } else if (starts_with(cmd, "tell") == 0) {
+        tell_cmd(cli_sock, cmd);
+    } else if (starts_with(cmd, "shout") == 0) {
+        shout_cmd(tid, cmd);
     } else {
-        if (strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0) {
-            my_error("Unsuported command!");
-            strcpy(message, "\nUnsupported Command!");
-            my_write(cli_sock, message, strlen(message));
+        if (strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
+                && starts_with(cmd, "") != 0) {
+            printf("Command not supported\n");
+            strcpy(msg, "Command not supported.");
+            my_write(cli_sock, msg, strlen(msg));
         }
     }
 }
@@ -93,10 +149,10 @@ void close_client(int tid) {
     client[tid].cli_sock = -1;
 }
 
-
+// TODO: if one thread closes, all threads and server closes
 void *start_client(void *arg) {
     int command_counter = 0;
-    char cmd[CMD_LENGTH], message[MSG_LENGTH];
+    char cmd[CMD_LENGTH], msg[MSG_LENGTH];
     char user_id[USERID_LENGTH], passwd[PASSWORD_LENGTH];
 
     int cli_sock;
@@ -112,14 +168,14 @@ void *start_client(void *arg) {
         client[tid].cli_sock = cli_sock = 
             my_accept(listen_fd, (struct sockaddr *)(&cli_addr), &cli_len); 
 
-        printf("Client connected to child %d <machine = %s, port = %x, %x.>\n", 
-            tid, inet_ntoa(cli_addr.sin_addr), cli_addr.sin_port, ntohs(cli_addr.sin_port));
+        printf("Client connected to child %d <socket = %d machine = %s, port = %x, %x.>\n", 
+            tid, cli_sock, inet_ntoa(cli_addr.sin_addr), cli_addr.sin_port, ntohs(cli_addr.sin_port));
 
         // Login
         my_write(cli_sock, "\n\n\nusername(guest): ", 20);
         my_read(cli_sock, user_id, USERID_LENGTH);
         //If user didn't enter anything, we give them a guest user_id
-        printf("checking name\n");
+        //printf("checking name\n");
         if(user_id[0] == '\0') {
             set_userid(tid, "guest");
         } else {
@@ -130,9 +186,9 @@ void *start_client(void *arg) {
                 set_userid(tid, user_id);
             }
             else {
-                strcpy(message, "Login failed!! \nThank you for using Online Tic-tac-toe Server.\
+                strcpy(msg, "Login failed!! \nThank you for using Online Tic-tac-toe Server.\
                     \nSee you next time\n\n");
-                my_write(cli_sock, message, strlen(message));
+                my_write(cli_sock, msg, strlen(msg));
                 close_client(tid);
                 continue;
             }
@@ -140,23 +196,23 @@ void *start_client(void *arg) {
 
         print_help(cli_sock);
         if (strcmp(get_userid(tid), "guest") == 0) {
-            strcpy(message, "\nyou login as a guest.the only command that you can use is \
+            strcpy(msg, "\nyou login as a guest.the only command that you can use is \
                 \n'register <username> <password>'");
-            my_write(cli_sock, message, strlen(message));
+            my_write(cli_sock, msg, strlen(msg));
         }
         my_write(cli_sock, "\n\n", 2);
 
         do {  // Game loop
-            sprintf(message, "<%s: %d> ", get_userid(tid), command_counter);
-            my_write(cli_sock, message, strlen(message));
+            sprintf(msg, "<%s: %d> ", get_userid(tid), command_counter);
+            my_write(cli_sock, msg, strlen(msg));
             my_read(cli_sock, cmd, CMD_LENGTH);
             // user_id is set, based on their type allow them to run commands
             if (strcmp(get_userid(tid), "guest") == 0) {
                 if (starts_with(cmd, "register") != 0 && (strcmp(cmd, "exit") != 0 
                                                   && strcmp(cmd, "quit") != 0)) {
-                    strcpy(message, "\nYou are not supposed to do this. \
+                    strcpy(msg, "\nYou are not supposed to do this. \
                                     \nYou can only use 'register <username> <password>' as guest.\n");
-                    my_write(cli_sock, message, strlen(message));
+                    my_write(cli_sock, msg, strlen(msg));
                 } else {
                     if (starts_with(cmd, "register") == 0)
                         register_cmd(cli_sock, cmd);
