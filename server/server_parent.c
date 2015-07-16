@@ -36,11 +36,11 @@ int main(int argc, char * argv[]) {
     struct sockaddr_in addr, recaddr;
     struct sigaction abc;
     int p2c_fd[20][2], c2p_fd[20][2];
-    fd_set rset;
+    fd_set rset, mset;
     struct timeval tv;
 
     tv.tv_sec = 5;
-    FD_ZERO(&rset);
+    FD_ZERO(&mset);
 
     abc.sa_handler = sig_chld;
     sigemptyset(&abc.sa_mask);
@@ -87,7 +87,7 @@ int main(int argc, char * argv[]) {
         } else if(cpid < 0) {
             my_error("fork failed");
         } else {
-            FD_SET(c2p_fd[id][0], &rset);
+            FD_SET(c2p_fd[id][0], &mset);
             maxr_fd = c2p_fd[id][0] + 1;
         }
     }
@@ -98,23 +98,28 @@ int main(int argc, char * argv[]) {
 
 
     for ( ; ; ) {
-        nready = my_select(maxr_fd, &rset, NULL, NULL, NULL);
+        rset = mset;
+        nready = my_select(maxr_fd, &rset, NULL, NULL, &tv );
         printf("nready:%d\n", nready);
         for (int i = 0; i < CLIENT_SIZE && nready > 0; ++i) {
-            if (FD_ISSET(c2p_fd[i][0], &rset)) { // Never hit
-                if (is_connected[i] == false) {
-                    printf("id:%d read:%d\n", i, c2p_fd[i][0]);
-                    my_read(c2p_fd[i][0], msg, sizeof(char)*MSG_SIZE);      // map username to child process
-                    clients[i] = (char*)malloc(sizeof(char)*strlen(msg));
-                    strcpy(clients[i], msg);
-                    printf("clients[%d]: %s\n", i, clients[i]);
-                    is_connected[i] = true;
-                } else {
-                    my_read(c2p_fd[i][0], msg, sizeof(char)*MSG_SIZE);
-                    //printf("id:%d name:%s msg:%s\n", i, clients[i], msg);
+            if (nready > 0) {
+                if (FD_ISSET(c2p_fd[i][0], &rset)) {
+                    printf("c2p_fd[%d][0] set\n", i);
+                    if (is_connected[i] == false) {
+                        printf("id:%d read:%d\n", i, c2p_fd[i][0]);
+                        my_read(c2p_fd[i][0], msg, sizeof(char)*MSG_SIZE);      // map username to child process
+                        clients[i] = (char*)malloc(sizeof(char)*strlen(msg));
+                        strcpy(clients[i], msg);
+                        printf("clients[%d]: %s\n", i, clients[i]);
+                        is_connected[i] = true;
+                    } else {
+                        my_read(c2p_fd[i][0], msg, sizeof(char)*MSG_SIZE);
+                        printf("id:%d name:%s msg:%s\n", i, clients[i], msg);
+                    }
+                    --nready;
                 }
-                --nready;
-            }
+            } else
+                continue;
         }
     }
 }

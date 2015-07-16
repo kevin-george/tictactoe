@@ -2,14 +2,15 @@
 #include <string.h>
 
 #include "login.h"
+#include "server.h"
 #include "utility.h"
 
-void set_userid(char* user_id) {
-  strncpy(user_name, user_id, sizeof(char)*USERNAME_LENGTH);
+void set_userid(int tid, char* user_id) {
+  strncpy(client[tid].user_id, user_id, USERID_LENGTH);
 }
 
-char* get_userid() {
-  return user_name;
+char* get_userid(int tid) {
+  return client[tid].user_id;
 }
 
 int register_user(char* user_id, char* passwd) {
@@ -24,7 +25,8 @@ int register_user(char* user_id, char* passwd) {
         return -1;
       }
     }
-    fprintf(auth, "%s,%s\n", user_id, passwd);
+    //fprintf(auth, "%s,%s\n", user_id, passwd);
+    fprintf(auth, "%s %s\n", user_id, passwd);
     fclose(auth);
     return 0;
   }
@@ -36,8 +38,9 @@ int authenticate_user(char* user_id, char* passwd) {
   if(auth == NULL) {
     my_error("Unable to open login_details.dat");
   } else {
-    char id[50], pass[50];
-    while(fscanf(auth, "%50c[^,]%50c[^\n]", id, pass) != EOF) {
+    char id[USERID_LENGTH], pass[PASSWORD_LENGTH];
+    while(/*fscanf(auth, "%50c[^,]%50c[^\n]", id, pass)*/fscanf(auth, "%s %s\n", id, pass) != EOF) {
+      //printf("%s %s\n", id, pass);
       if(strcmp(id, user_id) == 0 && strcmp(pass, passwd) == 0) {
         fclose(auth);
         return 0;
