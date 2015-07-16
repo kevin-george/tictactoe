@@ -5,12 +5,13 @@ Use any TCP client like telnet to connect on designated port.
 
 # TODO
 
-- [] Login module, stores user information (hashed?)
-  - [] Guest user
-  - [] Regular user
-- [] Mail module
-  - []
-- [] Messaging module
-  - []
+- ~~[] Login module, stores user information~~
+  - ~~[] Guest user~~
+  - ~~[] Regular user~~
+- ~~[] Register~~
+- ~~[] Messaging module~~
+  - ~~[] Tell~~
+  - ~~[] Shout~~
+undefined reference to `pthread_create'
 - [] Actual gameplay
   - []
