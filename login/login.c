@@ -14,18 +14,17 @@ char* get_userid(int tid) {
 }
 
 int register_user(char* user_id, char* passwd) {
-  auth = fopen("login_details.dat", "a+");
+  auth = fopen("./login/login_details.dat", "a+");
   if(auth == NULL) {
     my_error("Unable to open login_details.dat");
   } else {
     char id[50], pass[50];
-    while(fscanf(auth, "%50c[^,]%50c[^\n]", id, pass) != EOF) {
+    while(fscanf(auth, "%s %s[^\n]", id, pass) != EOF) {
       if(strcmp(id, user_id) == 0) {
         fclose(auth);
         return -1;
       }
     }
-    //fprintf(auth, "%s,%s\n", user_id, passwd);
     fprintf(auth, "%s %s\n", user_id, passwd);
     fclose(auth);
     return 0;
@@ -34,13 +33,12 @@ int register_user(char* user_id, char* passwd) {
 }
 
 int authenticate_user(char* user_id, char* passwd) {
-  auth = fopen("login_details.dat", "r");
+  auth = fopen("./login/login_details.dat", "r");
   if(auth == NULL) {
     my_error("Unable to open login_details.dat");
   } else {
     char id[USERID_LENGTH], pass[PASSWORD_LENGTH];
-    while(/*fscanf(auth, "%50c[^,]%50c[^\n]", id, pass)*/fscanf(auth, "%s %s\n", id, pass) != EOF) {
-      //printf("%s %s\n", id, pass);
+    while(fscanf(auth, "%s %s\n", id, pass) != EOF) {
       if(strcmp(id, user_id) == 0 && strcmp(pass, passwd) == 0) {
         fclose(auth);
         return 0;

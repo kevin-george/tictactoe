@@ -13,7 +13,7 @@
 #define MSG_LENGTH 500
 
 void print_help(int fd) {
-  char full_string[1500];
+    char full_string[1500];
     char *str = full_string;
     str += sprintf(str, "\nCommands supported:\n"); 
     str += sprintf(str, "  %-24s # List all online users\n", "who");
@@ -52,7 +52,7 @@ void register_cmd(int fd, char *cmd) {
     char msg[MSG_LENGTH];
 
     sscanf(cmd, "%s %s %s", buf, user_id, passwd);
-    if (register_user(user_id, passwd) == 0) {
+    if(register_user(user_id, passwd) == 0) {
         strcpy(msg, "\nRegistration Completed!");
         my_write(fd, msg, strlen(msg));
     } else {
@@ -67,8 +67,8 @@ void who_cmd(int fd) {
     char users[400] = "";
     int num_users = 0;
 
-    for (int i = 0; i < CLIENT_SIZE; ++i) {
-        if (client[i].cli_sock != -1) {
+    for(int i = 0; i < CLIENT_SIZE; ++i) {
+        if(client[i].cli_sock != -1) {
             strcat(users, client[i].user_id);
             strcat(users, " ");
             ++num_users;
@@ -88,14 +88,14 @@ void tell_cmd(int fd, char *cmd) {
 
     sscanf(cmd, "%s %s %s", buf, recv_id, msg);
 
-    for (i = 0; i < CLIENT_SIZE; ++i) {     // check if client exists
-        if (strcmp(recv_id, client[i].user_id) == 0) {
+    for(i = 0; i < CLIENT_SIZE; ++i) {     // check if client exists
+        if(strcmp(recv_id, client[i].user_id) == 0) {
             recv_cli_sock = client[i].cli_sock;
             break;
         }
     }
 
-    if (i == CLIENT_SIZE) {     // client does not exist
+    if(i == CLIENT_SIZE) {     // client does not exist
         sprintf(msg, "User %s is not online", recv_id);
         my_write(fd, msg, strlen(msg));
     } else {
@@ -112,8 +112,8 @@ void shout_cmd(int tid, char *cmd) {
     sscanf(cmd, "%s %s", buf, msg);
     sprintf(send_msg, "!shout! *%s*: %s\n", client[tid].user_id, msg);
 
-    for (int i = 0; i < CLIENT_SIZE; ++i) {
-        if (client[i].cli_sock != -1) {
+    for(int i = 0; i < CLIENT_SIZE; ++i) {
+        if(client[i].cli_sock != -1) {
             my_write(client[i].cli_sock, send_msg, strlen(send_msg));
         }
     }
@@ -135,9 +135,8 @@ void run_command(int tid, char* cmd) {
     } else if (starts_with(cmd, "shout") == 0) {
         shout_cmd(tid, cmd);
     } else {
-        if (strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
-                && starts_with(cmd, "") != 0) {
-            printf("Command not supported\n");
+        if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
+                && cmd[0] != '\0') {
             strcpy(msg, "Command not supported.");
             my_write(cli_sock, msg, strlen(msg));
         }
@@ -163,7 +162,7 @@ void *start_client(void *arg) {
     client[tid].tid = tid;
 
 
-    while (true) {
+    while(true) {
         // Idle till connection is made
         client[tid].cli_sock = cli_sock = 
             my_accept(listen_fd, (struct sockaddr *)(&cli_addr), &cli_len); 
@@ -182,7 +181,7 @@ void *start_client(void *arg) {
             my_write(cli_sock, "password: ", 11);
             my_read(cli_sock, passwd, PASSWORD_LENGTH);
             // The user is trying to login, authenticate who they are
-            if (authenticate_user(user_id, passwd) == 0) {
+            if(authenticate_user(user_id, passwd) == 0) {
                 set_userid(tid, user_id);
             }
             else {
@@ -195,26 +194,26 @@ void *start_client(void *arg) {
         }
 
         print_help(cli_sock);
-        if (strcmp(get_userid(tid), "guest") == 0) {
-            strcpy(msg, "\nyou login as a guest.the only command that you can use is \
+        if(strcmp(get_userid(tid), "guest") == 0) {
+            strcpy(msg, "\nYou login as a guest.The only command that you can use is \
                 \n'register <username> <password>'");
             my_write(cli_sock, msg, strlen(msg));
         }
         my_write(cli_sock, "\n\n", 2);
 
         do {  // Game loop
-            sprintf(msg, "<%s: %d> ", get_userid(tid), command_counter);
+            sprintf(msg, "\n<%s: %d> ", get_userid(tid), command_counter);
             my_write(cli_sock, msg, strlen(msg));
             my_read(cli_sock, cmd, CMD_LENGTH);
             // user_id is set, based on their type allow them to run commands
-            if (strcmp(get_userid(tid), "guest") == 0) {
-                if (starts_with(cmd, "register") != 0 && (strcmp(cmd, "exit") != 0 
+            if(strcmp(get_userid(tid), "guest") == 0) {
+                if(starts_with(cmd, "register") != 0 && (strcmp(cmd, "exit") != 0 
                                                   && strcmp(cmd, "quit") != 0)) {
                     strcpy(msg, "\nYou are not supposed to do this. \
                                     \nYou can only use 'register <username> <password>' as guest.\n");
                     my_write(cli_sock, msg, strlen(msg));
                 } else {
-                    if (starts_with(cmd, "register") == 0)
+                    if(starts_with(cmd, "register") == 0)
                         register_cmd(cli_sock, cmd);
                 }
             } else {
@@ -222,10 +221,9 @@ void *start_client(void *arg) {
             }
 
             ++command_counter;
-        } while (strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0);
+        } while(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0);
 
         close_client(tid);
-
     }
 }
 
