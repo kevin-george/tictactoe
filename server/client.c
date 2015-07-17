@@ -130,20 +130,19 @@ void nonquiet_cmd(int tid) {
 }
 
 void block_cmd(int tid, char *cmd) {    // Not tested
-    FILE *b_file;
+    FILE *in;
     char buf[20], block_path[100];
     char user_id[USERID_LENGTH], msg[MSG_LENGTH];
     bool is_blocked = false;
 
     sscanf(cmd, "%s %s", buf, user_id);     // Extract userid to block
-    sprintf(block_path, "./block/%s.dat", user_id);
+    sprintf(block_path, "./block/%s.dat", client[tid].user_id);
 
-    b_file = fopen(block_path, "ra+");
-    if (!b_file) {
+    if ( (in = fopen(block_path, "a+")) == NULL) {
         my_error("Unable to open block file");
     } else {
         char id[USERID_LENGTH];
-        while(fscanf(b_file, "%s[^\n]", id) != EOF) {
+        while(fscanf(in, "%s[^\n]", id) != EOF) {
             if(strcmp(id, user_id) == 0) {
                 sprintf(msg, "%s was blocked before.", user_id);
                 my_write(client[tid].cli_sock,msg, strlen(msg));
@@ -152,43 +151,40 @@ void block_cmd(int tid, char *cmd) {    // Not tested
             }
         }
 
-        if (is_blocked == false) 
-            fprintf(b_file, "%s\n", user_id);
+        if (is_blocked == false)
+            fprintf(in, "%s\n", user_id);
     }
 
-    fclose(b_file);
+    fclose(in);
 }
 
 void unblock_cmd(int tid, char *cmd) {  // Not tested
-    FILE *in;
-    char buf[20], block_path[100];
+    FILE *in, *c_in;
+    char buf[20], block_path[100], copy_path[100];
     char user_id[USERID_LENGTH], msg[MSG_LENGTH];
     bool is_blocked = false;
 
     sscanf(cmd, "%s %s", buf, user_id);     // Extract userid to block
-    sprintf(block_path, "./block/%s.dat", user_id);
-
-    in = fopen(block_path, "r");
-    if (!in)
-        my_error("Unable to open block file");
+    sprintf(block_path, "./block/%s.dat", client[tid].user_id);
+    sprintf(copy_path, "./block/copy_%s.dat", client[tid].user_id);
     
-    fclose(in);
+    if ( (c_in = fopen(copy_path, "w")) == NULL)
+        my_error("Unable to open block file copy");
 
-    in = fopen(block_path, "w");
-    if (!in) {
+    if ( (in = fopen(block_path, "r+")) == NULL) {
+        fclose(c_in);
         my_error("Unable to open block file");
-    }
-    else {
+    } else {
         char id[USERID_LENGTH];
         while (fscanf(in, "%s[^\n]", id) != EOF) {
             if (strcmp(id, user_id) == 0) {
-                fseek(in, strlen(user_id)+1, SEEK_CUR);
-                //getline(in, id, '\n');  // TODO: get rid of getline
-                //printf("getline:%s\n", id);
+                fseek(in, strlen(id)+1, SEEK_CUR);
+                fgets(id, strlen(id)+1, in);
                 sprintf(msg, "User %s unblocked.", user_id);
                 my_write(client[tid].cli_sock, msg, strlen(msg));
                 is_blocked = true;
-                break;
+            } else {
+                fprintf(c_in, "%s\n", id);
             }
         }
 
@@ -196,8 +192,13 @@ void unblock_cmd(int tid, char *cmd) {  // Not tested
             sprintf(msg, "User %s was not blocked", user_id);
             my_write(client[tid].cli_sock,msg, strlen(msg));
         }
+        
+        fclose(c_in);
+        fclose(in);
+
+        remove(block_path);
+        rename(copy_path, block_path);
     }
-    fclose(in);
 }
 
 void run_command(int tid, char* cmd) {
