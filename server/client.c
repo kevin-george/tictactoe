@@ -183,7 +183,7 @@ void unblock_cmd(int tid, char *cmd) {  // Not tested
         while (fscanf(in, "%s[^\n]", id) != EOF) {
             if (strcmp(id, user_id) == 0) {
                 fseek(in, strlen(user_id)+1, SEEK_CUR);
-                getline(in, id, '\n');  // TODO: get rid of getline
+                //getline(in, id, '\n');  // TODO: get rid of getline
                 //printf("getline:%s\n", id);
                 sprintf(msg, "User %s unblocked.", user_id);
                 my_write(client[tid].cli_sock, msg, strlen(msg));
