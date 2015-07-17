@@ -42,6 +42,34 @@ void my_log(char *msg) {
 /*                            IPC                            */
 /*-----------------------------------------------------------*/
 
+int my_mread(int fd, void *vptr, size_t n) {
+    size_t nleft;
+    int nread;
+    char *ptr;
+
+    ptr = vptr;
+    nleft = n;
+    while (nleft > 0) {
+        if ((nread = read(fd, ptr, nleft)) < 0) {
+            if (errno == EINTR){
+                printf("EINTR\n");
+                nread = 0;   // and call read() again
+            } else
+            return -1;
+        } else if (nread == 0)
+        break;           // EOF
+
+        nleft -= nread;
+        ptr += nread;
+
+        if (*(ptr-nread) == '.') {
+            *(ptr-2) = '\0';
+            break;
+        }
+    }
+
+  return (n - nleft);
+}
 
 int my_read(int fd, void *vptr, size_t n) {
   size_t nleft;
@@ -67,11 +95,7 @@ int my_read(int fd, void *vptr, size_t n) {
       break;
     }
   }
-  /*char *ptr2 = vptr;
-  for (int i = 0; i < strlen(ptr2); ++i)
-    printf("%i:%c\n", i, ptr2[i]);
-  printf("size:%lu\n", strlen(ptr2));
-  */ 
+
   return (n - nleft);
 }
 
@@ -94,16 +118,34 @@ int my_write(int fd, const void *vptr, size_t n) {
     nleft -= nwritten;
     ptr += nwritten;
   }
-/*
-  char *ptr2 = vptr;
-  for (int i = 0; i < strlen(ptr2); ++i)
-    printf("%i:%c\n", i, ptr2[i]);
-  printf("size:%lu\n", strlen(ptr2));
-*/
+
   return n;
 }
 
+int my_mwrite(int fd,const void *vptr, size_t n) {
+    size_t nleft;
+    int nwritten;
+    const char *ptr;
 
+    ptr = vptr;
+    nleft = n;
+    while (nleft > 0) {
+        if ((nwritten = write(fd, ptr, nleft)) <= 0) {
+            if (nwritten < 0 && errno == EINTR)
+                nwritten = 0;   // and call write() again
+            else
+                return -1;      // error
+        } 
+
+        nleft -= nwritten;
+        ptr += nwritten;
+
+        if (*(ptr-nwritten) == '.')
+            break;
+    }
+
+    return n;
+}
 /*-----------------------------------------------------------*/
 /*                          SOCKETS                          */
 /*-----------------------------------------------------------*/

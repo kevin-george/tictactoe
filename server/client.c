@@ -1,9 +1,13 @@
+#include <fcntl.h>
 #include <string.h>
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
 
 #include "server.h"
 #include "client.h"
@@ -47,6 +51,20 @@ void print_help(int fd) {
     my_write(fd, full_string, strlen(full_string));
 }
 
+void create_mail_file(const char *user_id) {
+    FILE *outfile;
+    char path[100];
+
+    sprintf(path, "./mail/%s.dat", user_id);
+
+    if ( (outfile = fopen(path, "w")) == NULL)
+        my_error("Unable to open mail file");
+    else
+        fprintf(outfile, "Your messages:\n");
+
+    fclose(outfile);
+}
+
 void register_cmd(int fd, char *cmd) {
     char buf[20];
     char user_id[USERID_LENGTH], passwd[PASSWORD_LENGTH];
@@ -56,6 +74,7 @@ void register_cmd(int fd, char *cmd) {
     if(register_user(user_id, passwd) == 0) {
         strcpy(msg, "\nRegistration Completed!");
         my_write(fd, msg, strlen(msg));
+        create_mail_file(user_id);
     } else {
         strcpy(msg, "\nRegistration Failed!");
         my_write(fd, msg, strlen(msg));
@@ -201,6 +220,88 @@ void unblock_cmd(int tid, char *cmd) {  // Not tested
     }
 }
 
+void mail_cmd(int tid, char *cmd) {
+    FILE *mail_file, *user_file;
+    char buf[20], mail_path[100]; 
+    char recv_id[USERID_LENGTH], subject[30];
+    char msg[MSG_LENGTH];
+    int recv_cli_sock = -1;
+    bool user_exists = false, user_is_online = false;
+
+    sscanf(cmd, "%s %s %s", buf, recv_id, subject);
+
+    // check if user is online
+    for (int i = 0; i < CLIENT_SIZE; ++i) {      
+        if (client[i].cli_sock != -1) {
+            if (strcmp(recv_id, client[i].user_id) == 0) {
+                user_exists = true;
+                user_is_online = true;
+                recv_cli_sock = client[i].cli_sock;
+                break; 
+            }
+        }
+    }
+    
+    // If user is not online, check database
+    if (user_exists == false) {
+        if( (user_file = fopen("./login/login_details.dat", "r")) == NULL) {
+            my_error("Unable to open login_details.dat");
+        } else {
+            char id[USERID_LENGTH], pass[PASSWORD_LENGTH];
+            while(fscanf(user_file, "%s %s\n", id, pass) != EOF) {
+                if(strcmp(id, recv_id) == 0) {
+                    user_exists = true;
+                }
+            }
+            fclose(user_file);
+        }
+    }
+
+    // Send message
+    if (user_exists == true) {
+        sprintf(msg, "Please input mail body, finishing with '.' at the begining of a line\n");
+        my_write(client[tid].cli_sock, msg, strlen(msg));
+
+        my_mread(client[tid].cli_sock, msg, MSG_LENGTH);   // get body
+
+        // Store message in mail database
+        sprintf(mail_path, "./mail/%s.dat", recv_id);
+        if ( (mail_file = fopen(mail_path, "a+")) == NULL) {
+            my_error("Unable to open mail file");
+        } else {
+            char temp[MSG_LENGTH], temp2[30], temp3[MSG_LENGTH];
+            char *time_stamp;
+            int index = 0;
+            time_t now = time(NULL);
+            time_stamp = asctime(localtime(&now));
+
+            while(fscanf(mail_file, "%s[^\n]", temp) != EOF) {
+                sscanf(temp, "%s %s", temp2, temp3);
+                if (strcmp(temp2, "index") == 0)
+                    ++index;
+            }
+
+            fprintf(mail_file, "index %d\n", index);
+            fprintf(mail_file, "status N\n");
+            fprintf(mail_file, "user %s\n", client[tid].user_id);
+            fprintf(mail_file, "subject \"%s\"\n", subject);
+            fprintf(mail_file, "timestamp %s\n", time_stamp);
+            fprintf(mail_file, "body %s\n", msg);
+
+            my_write(client[tid].cli_sock, "Message sent", strlen("Message sent"));
+            
+            if (user_is_online == true)
+               my_write(recv_cli_sock, "A new message just arrived.\n", 28);
+
+            fclose(mail_file);
+        }
+    } else {
+        sprintf(msg, "%s is not a user.", recv_id);
+        my_write(client[tid].cli_sock, msg, strlen(msg));
+    }
+
+}
+
 void run_command(int tid, char* cmd) {
     char msg[MSG_LENGTH];
     int cli_sock = client[tid].cli_sock;
@@ -224,6 +325,8 @@ void run_command(int tid, char* cmd) {
         block_cmd(tid, cmd);
     } else if (starts_with(cmd, "unblock") == 0) {
         unblock_cmd(tid, cmd);
+    } else if (starts_with(cmd, "mail") == 0) {
+        mail_cmd(tid, cmd);
     } else {
         if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
                 && cmd[0] != '\0') {
@@ -316,85 +419,3 @@ void *start_client(void *arg) {
         close_client(tid);
     }
 }
-
-
-/*
-
-void start_client(int id, int listenfd, struct sockaddr_in cliaddr, 
-                                          int *p2c_fd, int *c2p_fd) {
-    char cmd[CMD_LENGTH];
-    char buf[20];
-    int cli_sock;
-    char message[MSG_LENGTH];
-    int command_counter = 0;
-    char user_id[USERNAME_LENGTH], passwd[PASSWORD_LENGTH];
-
-    socklen_t clilen = sizeof(cliaddr);
-
-
-
-    while(true) {
-        // Idle till connection is made
-        cli_sock = my_accept(listenfd, (struct sockaddr *)(&cliaddr), &clilen); 
-        printf("Client connected to child %d <machine = %s, port = %x, %x.>\n", 
-            id, inet_ntoa(cliaddr.sin_addr), cliaddr.sin_port, ntohs(cliaddr.sin_port));
-
-        // Login
-        my_write(cli_sock, "\n\n\nusername(guest): ", 20);
-        my_read(cli_sock, user_id, USERNAME_LENGTH);
-        //If user didn't enter anything, we give them a guest user_id
-        printf("checking name");
-        if(user_id[0] == '\0') {
-            print_help(cli_sock);
-            strcpy(message, "\nyou login as a guest.the only command that you can use is \
-                \n'register <username> <password>'");
-            my_write(cli_sock, message, strlen(message));
-            set_userid("guest");
-        } else {
-            my_write(cli_sock, "password: ", 11);
-            my_read(cli_sock, passwd, PASSWORD_LENGTH);
-            // The user is trying to login, authenticate who they are
-            if (authenticate_user(user_id, passwd) == 0) {
-                set_userid(user_id);
-                // Notify server of client name
-                my_write(c2p_fd[1], user_id, strlen(user_id));
-            }
-            else {
-                strcpy(message, "Login failed!! \nThank you for using Online Tic-tac-toe Server.\
-                    \nSee you next time\n\n");
-                my_write(cli_sock, message, strlen(message));
-                close(cli_sock);
-                continue;
-            }
-        }
-
-        print_help(cli_sock);
-        my_write(cli_sock, "\n\n", 2);
-
-        do {  // Game loop
-            sprintf(message, "<%s: %d> ", get_userid(), command_counter);
-            my_write(cli_sock, message, strlen(message));
-            my_read(cli_sock, cmd, CMD_LENGTH);
-            // user_id is set, based on their type allow them to run commands
-            if (strcmp(get_userid(), "guest") == 0) {
-                if (starts_with(cmd, "register") != 0 && (strcmp(cmd, "exit") != 0 
-                                                  && strcmp(cmd, "quit") != 0)) {
-                    strcpy(message, "\nYou are not supposed to do this. \
-                                    \nYou can only use 'register <username> <password>' as guest.\n");
-                    my_write(cli_sock, message, strlen(message));
-                } else {
-                    if (starts_with(cmd, "register") == 0) {
-                        sscanf(cmd, "%s %s %s", buf, user_id, passwd);
-                        register_user(user_id, passwd);
-                    } 
-                }
-            } else {
-                run_command(cmd, cli_sock, p2c_fd, c2p_fd);
-            }
-
-            ++command_counter;
-        } while (strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0);
-
-        my_close(cli_sock);
-    }
-} */

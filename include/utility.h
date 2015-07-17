@@ -12,9 +12,10 @@ void my_error(char *err);
 void my_log(char *log);
 
 // IPC 
+int my_mread(int fd, void *buff, size_t nbytes);
 int my_read(int fd, void *buff,size_t nbytes);
 int my_write(int fd,const void *buff,size_t nbytes);
-
+int my_mwrite(int fd,const void *buff,size_t nbytes);
 // Sockets
 int my_socket(int domain, int type, int protocol);
 int my_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
