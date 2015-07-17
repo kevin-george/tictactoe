@@ -22,7 +22,7 @@ Use any TCP client like telnet to connect on designated port.
 - Observe
   - Unobserve
   - Kibitz
-- Block
-- Unblock
+- ~~Block~~
+- ~~Unblock~~
 - Info
 - Passwd
