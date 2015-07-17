@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "server.h"
 #include "client.h"
@@ -113,10 +114,90 @@ void shout_cmd(int tid, char *cmd) {
     sprintf(send_msg, "!shout! *%s*: %s\n", client[tid].user_id, msg);
 
     for(int i = 0; i < CLIENT_SIZE; ++i) {
-        if(client[i].cli_sock != -1) {
+        if(client[i].cli_sock != -1 && client[i].is_quiet == false)
             my_write(client[i].cli_sock, send_msg, strlen(send_msg));
+    }
+}
+
+void quiet_cmd(int tid) {
+    client[tid].is_quiet = true;
+    my_write(client[tid].cli_sock, "Enter quiet mode.", 17);
+}
+
+void nonquiet_cmd(int tid) {
+    client[tid].is_quiet = false;
+    my_write(client[tid].cli_sock, "Enter nonquiet mode.", 20);
+}
+
+void block_cmd(int tid, char *cmd) {    // Not tested
+    FILE *b_file;
+    char buf[20], block_path[100];
+    char user_id[USERID_LENGTH], msg[MSG_LENGTH];
+    bool is_blocked = false;
+
+    sscanf(cmd, "%s %s", buf, user_id);     // Extract userid to block
+    sprintf(block_path, "./block/%s.dat", user_id);
+
+    b_file = fopen(block_path, "ra+");
+    if (!b_file) {
+        my_error("Unable to open block file");
+    } else {
+        char id[USERID_LENGTH];
+        while(fscanf(b_file, "%s[^\n]", id) != EOF) {
+            if(strcmp(id, user_id) == 0) {
+                sprintf(msg, "%s was blocked before.", user_id);
+                my_write(client[tid].cli_sock,msg, strlen(msg));
+                is_blocked = true;
+                break;
+            }
+        }
+
+        if (is_blocked == false) 
+            fprintf(b_file, "%s\n", user_id);
+    }
+
+    fclose(b_file);
+}
+
+void unblock_cmd(int tid, char *cmd) {  // Not tested
+    FILE *in;
+    char buf[20], block_path[100];
+    char user_id[USERID_LENGTH], msg[MSG_LENGTH];
+    bool is_blocked = false;
+
+    sscanf(cmd, "%s %s", buf, user_id);     // Extract userid to block
+    sprintf(block_path, "./block/%s.dat", user_id);
+
+    in = fopen(block_path, "r");
+    if (!in)
+        my_error("Unable to open block file");
+    
+    fclose(in);
+
+    in = fopen(block_path, "w");
+    if (!in) {
+        my_error("Unable to open block file");
+    }
+    else {
+        char id[USERID_LENGTH];
+        while (fscanf(in, "%s[^\n]", id) != EOF) {
+            if (strcmp(id, user_id) == 0) {
+                fseek(in, strlen(user_id)+1, SEEK_CUR);
+                getline(in, id, '\n');  // TODO: get rid of getline
+                printf("getline:%s\n", id);
+                sprintf(msg, "User %s unblocked.", user_id);
+                my_write(client[tid].cli_sock, msg, strlen(msg));
+                is_blocked = true;
+                break;
+            }
+        }
+
+        if (is_blocked == false) {
+            sprintf(msg, "User %s was not blocked", user_id);
+            my_write(client[tid].cli_sock,msg, strlen(msg));
         }
     }
+    fclose(in);
 }
 
 void run_command(int tid, char* cmd) {
@@ -134,6 +215,14 @@ void run_command(int tid, char* cmd) {
         tell_cmd(cli_sock, cmd);
     } else if (starts_with(cmd, "shout") == 0) {
         shout_cmd(tid, cmd);
+    } else if (strcmp(cmd, "quiet") == 0) {
+        quiet_cmd(tid);
+    } else if (strcmp(cmd, "nonquiet") == 0) {
+        nonquiet_cmd(tid);
+    } else if (starts_with(cmd, "block") == 0) {
+        block_cmd(tid, cmd);
+    } else if (starts_with(cmd, "unblock") == 0) {
+        unblock_cmd(tid, cmd);
     } else {
         if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
                 && cmd[0] != '\0') {

@@ -42,8 +42,10 @@ int main(int argc, char * argv[]) {
 
     my_listen(listen_fd, 5);
 
-    for (int i = 0; i < CLIENT_SIZE; ++i)
+    for (int i = 0; i < CLIENT_SIZE; ++i) {     // Setup client data
         client[i].cli_sock = -1;                // -1 indicates available entry
+        client[i].is_quiet = false;
+    }
 
     for (int i = 0; i < CLIENT_SIZE; ++i) {
         tid_ptr = (int*)malloc(sizeof(int));
