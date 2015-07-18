@@ -17,8 +17,9 @@ typedef struct client_t{
 // pThread
 void *start_client(void *arg);
 
-// void start_client(int id, int listenfd, struct sockaddr_in cliaddr, int *p2c_pipe, int *c2p_pipe);
 void run_command(int tid, char *cmd);
+
+void create_mail_file(const char *user_id);
 
 // Commands
 void who_cmd(int fd);
@@ -30,6 +31,8 @@ void quiet_cmd(int tid);
 void nonquiet_cmd(int tid);
 void block_cmd(int tid, char *cmd);
 void unblock_cmd(int tid, char *cmd);
+void mail_cmd(int tid, char *cmd);
+void listmail_cmd(int tid);
 
 // Cleanup
 void close_client(int tid);

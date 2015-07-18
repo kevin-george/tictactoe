@@ -281,7 +281,7 @@ void mail_cmd(int tid, char *cmd) {
                     ++index;
             }
 
-            fprintf(mail_file, "index %d\n", index);
+            //fprintf(mail_file, "index %d\n", index);
             fprintf(mail_file, "status N\n");
             fprintf(mail_file, "user %s\n", client[tid].user_id);
             fprintf(mail_file, "subject \"%s\"\n", subject);
@@ -300,6 +300,42 @@ void mail_cmd(int tid, char *cmd) {
         my_write(client[tid].cli_sock, msg, strlen(msg));
     }
 
+}
+
+void listmail_cmd(int tid) {
+    FILE *infile;
+    int index = 0;
+    char mail_path[100], header[500]; 
+    char buf[30], buf2[30], line[100];
+    char *str = header;
+
+    sprintf(mail_path, "./mail/%s.dat", client[tid].user_id);
+
+    if ( (infile = fopen(mail_path, "r")) == NULL) {
+        my_error("Unable to open mail file");
+    } else {
+        if (fgets(line, 100, infile) != NULL) {
+            printf("%s\n", line);
+            str += sprintf(str, "%s", line);
+        }
+
+        while (fscanf(infile, "%s %s[^\n]", buf, buf2) != EOF) {
+            if (strcmp(buf, "status") == 0) {
+                str += sprintf(str, "  %-2d %-1s ", index, buf2);
+            } else if (strcmp(buf, "user") == 0) {
+                str += sprintf(str, "%-10s ", buf2);
+            } else if (strcmp(buf, "subject") == 0) {
+                str += sprintf(str, "%-30s ", buf2);
+            } else if (strcmp(buf, "timestamp") == 0) {
+                str += sprintf(str, "%s", buf2);
+                fgets(line, 100, infile);
+                str += sprintf(str, " %s", line);
+            }
+        }
+
+        my_write(client[tid].cli_sock, header, strlen(header));
+        fclose(infile);
+    }
 }
 
 void run_command(int tid, char* cmd) {
@@ -327,6 +363,8 @@ void run_command(int tid, char* cmd) {
         unblock_cmd(tid, cmd);
     } else if (starts_with(cmd, "mail") == 0) {
         mail_cmd(tid, cmd);
+    } else if (strcmp(cmd, "listmail") == 0) {
+        listmail_cmd(tid);
     } else {
         if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
                 && cmd[0] != '\0') {
