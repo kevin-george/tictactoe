@@ -228,7 +228,8 @@ void mail_cmd(int tid, char *cmd) {
     int recv_cli_sock = -1;
     bool user_exists = false, user_is_online = false;
 
-    sscanf(cmd, "%s %s %s", buf, recv_id, subject);
+    sscanf(cmd, "%s %s", buf, recv_id);
+    strcpy(subject, cmd + strlen(buf) + strlen(recv_id)+2);
 
     // check if user is online
     for (int i = 0; i < CLIENT_SIZE; ++i) {      
@@ -315,26 +316,117 @@ void listmail_cmd(int tid) {
         my_error("Unable to open mail file");
     } else {
         if (fgets(line, 100, infile) != NULL) {
-            printf("%s\n", line);
             str += sprintf(str, "%s", line);
         }
-
-        while (fscanf(infile, "%s %s[^\n]", buf, buf2) != EOF) {
+        while (fgets(line, 100, infile) != NULL) {
+            sscanf(line, "%s %s", buf, buf2);
             if (strcmp(buf, "status") == 0) {
-                str += sprintf(str, "  %-2d %-1s ", index, buf2);
+                str += sprintf(str, "  %-2d %-1s ", index++, buf2);
             } else if (strcmp(buf, "user") == 0) {
                 str += sprintf(str, "%-10s ", buf2);
             } else if (strcmp(buf, "subject") == 0) {
-                str += sprintf(str, "%-30s ", buf2);
+                line[strlen(line) -1] = ' ';
+                str += sprintf(str, "%-30s ", line+strlen(buf)+1);
             } else if (strcmp(buf, "timestamp") == 0) {
-                str += sprintf(str, "%s", buf2);
-                fgets(line, 100, infile);
-                str += sprintf(str, " %s", line);
+                str += sprintf(str, "%s", line+strlen(buf)+1);
             }
+            strcpy(buf, " "); 
         }
 
         my_write(client[tid].cli_sock, header, strlen(header));
         fclose(infile);
+    }
+}
+
+void readmail_cmd(int tid, char *cmd) {
+    FILE *infile, *cfile;
+    char buf[30], line[100];
+    char msg[MSG_LENGTH], mail_path[50];
+    char copy_path[50];
+    int index, itr = -1;
+
+    sscanf(cmd, "%s %d", buf, &index);      // extract mail index
+    sprintf(mail_path, "./mail/%s.dat", client[tid].user_id);
+    sprintf(copy_path, "./mail/copy_%s.dat", client[tid].user_id);
+
+    if ( (cfile = fopen(copy_path, "a+")) == NULL)
+        my_error("Unable to open copy readmail file");
+
+    if ( (infile = fopen(mail_path, "r")) == NULL) {
+        my_error("Unable to open readmail");
+    } else {
+        fgets(line, 100, infile);
+        fprintf(cfile, "%s", line);
+
+        while (fgets(line, 100, infile) != NULL) {
+            sscanf(line, "%s", buf);
+            if (strcmp(buf, "status") == 0)
+                ++itr;
+            if (index == itr) {
+                if (strcmp(buf, "status") == 0) {
+                    // write new itr value
+                    sprintf(line, "status Y\n");
+                } else if (strcmp(buf, "body") == 0) {
+                    strcpy(msg, (line+strlen("body")));
+                    fprintf(cfile, "%s", line);
+                    while (fpeek(infile) != '.') {
+                        fgets(line, 100, infile);
+                        strcat(msg, " ");
+                        strcat(msg, line);
+                        fprintf(cfile, "%s", line);
+                    } 
+                    fgets(line, 100, infile);
+                    strcat(msg, " ");
+                    strcat(msg, line);
+
+                    my_write(client[tid].cli_sock, msg, strlen(msg));
+                }
+                fprintf(cfile, "%s", line);
+            } else 
+                fprintf(cfile, "%s", line);
+
+            
+        }
+
+        fclose(infile);
+        fclose(cfile);
+        remove(mail_path);
+        rename(copy_path, mail_path);
+    }
+}
+
+void deletemail_cmd(int tid, char *cmd) {
+    FILE *infile, *cfile;
+    char mail_path[50], copy_path[50];
+    char buf[30], line[100];
+    int index, itr = -1;
+
+    sscanf(cmd, "%s %d", buf, &index);
+
+    sprintf(mail_path, "./mail/%s.dat", client[tid].user_id);
+    sprintf(copy_path, "./mail/copy_%s.dat", client[tid].user_id);
+
+    if ( (cfile = fopen(copy_path, "a+")) == NULL)
+        my_error("Unable to open copy readmail file");
+
+    if ( (infile = fopen(mail_path, "r")) == NULL) {
+        my_error("Unable to open readmail");
+    } else {
+        fgets(line, 100, infile);
+        fprintf(cfile, "%s", line);
+
+        while (fgets(line, 100, infile) != NULL) {
+            sscanf(line, "%s", buf);
+            if (strcmp(buf, "status") == 0)
+                ++itr;
+            if (index != itr)
+                fprintf(cfile, "%s", line);
+        }
+        my_write(client[tid].cli_sock, "Message deleted", 15);
+        fclose(infile);
+        fclose(cfile);
+        remove(mail_path);
+        rename(copy_path, mail_path);
     }
 }
 
@@ -365,6 +457,12 @@ void run_command(int tid, char* cmd) {
         mail_cmd(tid, cmd);
     } else if (strcmp(cmd, "listmail") == 0) {
         listmail_cmd(tid);
+    } else if (starts_with(cmd, "readmail") == 0) {
+        // check for valid arguements
+        readmail_cmd(tid, cmd);
+    } else if (starts_with(cmd, "deletemail") == 0) {
+        // Check for valid arguments 
+        deletemail_cmd(tid, cmd);
     } else {
         if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
                 && cmd[0] != '\0') {

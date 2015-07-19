@@ -10,6 +10,7 @@
 // MISC
 void my_error(char *err);
 void my_log(char *log);
+int fpeek(FILE *f);
 
 // IPC 
 int my_mread(int fd, void *buff, size_t nbytes);

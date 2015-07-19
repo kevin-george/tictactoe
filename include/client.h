@@ -33,6 +33,8 @@ void block_cmd(int tid, char *cmd);
 void unblock_cmd(int tid, char *cmd);
 void mail_cmd(int tid, char *cmd);
 void listmail_cmd(int tid);
+void readmail_cmd(int tid, char *cmd);
+void deletemail_cmd(int tid, char *cmd);
 
 // Cleanup
 void close_client(int tid);
