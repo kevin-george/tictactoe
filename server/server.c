@@ -1,17 +1,10 @@
+#include <pthread.h>
 #include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <signal.h>
 #include <string.h>
 #include <stdbool.h>
-#include <pthread.h>
+#include <stdio.h>
+#include <unistd.h>
 
 #include "server.h"
 #include "utility.h"
@@ -21,9 +14,9 @@ int main(int argc, char * argv[]) {
     pthread_t tid;
     struct sockaddr_in serv_addr;
 
-
     if(argc < 2) {
-        my_log("Usage: ./server <port number>.\n");
+        printf("Usage: ./server_exec <port number>.\n");
+		exit(1);
     }
 
     listen_fd = my_socket(AF_INET, SOCK_STREAM, 0);

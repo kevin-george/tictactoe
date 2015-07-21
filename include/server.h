@@ -9,4 +9,3 @@ client_t client[CLIENT_SIZE];
 int listen_fd;
 
 #endif
-
