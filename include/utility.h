@@ -6,11 +6,13 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <stdbool.h>
 
 // MISC
 void my_error(char *err);
 void my_log(char *log);
 int fpeek(FILE *f);
+bool check_args(char *cmd, int argc);
 
 // IPC 
 int my_mread(int fd, void *buff, size_t nbytes);

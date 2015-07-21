@@ -97,7 +97,7 @@ void passwd_cmd(int tid, char *cmd) {
                 strcpy(pass, new_passwd);
             fprintf(copy_infile, "%s %s\n", id, pass);
         }
-        
+
         my_write(client[tid].cli_sock, "Password changed.", 17);
 
         fclose(copy_infile);
@@ -114,10 +114,13 @@ void run_command(int tid, char* cmd) {
 
     //printf ("command:%s\n", cmd);
     if(starts_with(cmd, "register") == 0) {
-        register_cmd(cli_sock, cmd);
+        if (check_args(cmd, 3) == true)
+            register_cmd(cli_sock, cmd);
+        else
+            my_write(client[tid].cli_sock, "Invalid format", 14);
     } else if(strcmp(cmd, "who") == 0) {
         who_cmd(cli_sock);
-    } else if(strcmp(cmd, "help") == 0) {
+    } else if(strcmp(cmd, "help") == 0 || strcmp(cmd, "?") == 0) {
         print_help(cli_sock);
     } else if (starts_with(cmd, "tell") == 0) {
         tell_cmd(cli_sock, cmd);
@@ -136,13 +139,20 @@ void run_command(int tid, char* cmd) {
     } else if (strcmp(cmd, "listmail") == 0) {
         listmail_cmd(tid);
     } else if (starts_with(cmd, "readmail") == 0) {
-        // check for valid arguements
-        readmail_cmd(tid, cmd);
+        if (check_args(cmd, 2) == true)
+            readmail_cmd(tid, cmd);
+        else
+            my_write(client[tid].cli_sock, "Invalid format", 14);
     } else if (starts_with(cmd, "deletemail") == 0) {
-        // Check for valid arguments 
-        deletemail_cmd(tid, cmd);
+        if (check_args(cmd, 2) == true)
+            deletemail_cmd(tid, cmd);
+        else
+            my_write(client[tid].cli_sock, "Invalid format", 14);
     } else if (starts_with(cmd, "passwd") == 0) {
-        passwd_cmd(tid, cmd);
+        if (check_args(cmd, 2) == true)
+            passwd_cmd(tid, cmd);
+        else
+            my_write(client[tid].cli_sock, "Password must be one word", 25);
     } else {
         if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
                 && cmd[0] != '\0') {
