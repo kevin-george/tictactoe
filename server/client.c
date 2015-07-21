@@ -77,6 +77,37 @@ void who_cmd(int fd) {
     my_write(fd, send_msg, strlen(send_msg));
 }
 
+void passwd_cmd(int tid, char *cmd) {
+    FILE *infile, *copy_infile;
+    char new_passwd[PASSWORD_LENGTH], buf[30];
+    char file_path[] = "./login/login_details.dat";
+    char copy_path[] = "./login/copy.dat";
+    sscanf(cmd, "%s %s", buf, new_passwd);
+
+    if ( (copy_infile = fopen(copy_path, "a+")) == NULL) {
+        my_error("Unable to open copy passwd file");
+    }
+
+    if ( (infile = fopen(file_path, "a+")) == NULL) {
+        my_error("Unable to open passwd file");
+    } else {
+        char id[USERID_LENGTH], pass[PASSWORD_LENGTH];
+        while (fscanf(infile, "%s %s\n", id, pass) != EOF) {
+            if (strcmp(id, client[tid].user_id) == 0)
+                strcpy(pass, new_passwd);
+            fprintf(copy_infile, "%s %s\n", id, pass);
+        }
+        
+        my_write(client[tid].cli_sock, "Password changed.", 17);
+
+        fclose(copy_infile);
+        fclose(infile);
+        remove(file_path);
+        rename(copy_path, file_path);
+    }
+
+}
+
 void run_command(int tid, char* cmd) {
     char msg[MSG_LENGTH];
     int cli_sock = client[tid].cli_sock;
@@ -110,6 +141,8 @@ void run_command(int tid, char* cmd) {
     } else if (starts_with(cmd, "deletemail") == 0) {
         // Check for valid arguments 
         deletemail_cmd(tid, cmd);
+    } else if (starts_with(cmd, "passwd") == 0) {
+        passwd_cmd(tid, cmd);
     } else {
         if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
                 && cmd[0] != '\0') {
