@@ -139,7 +139,6 @@ void run_command(int tid, char* cmd) {
         mail_cmd(tid, cmd);
     } else if(strcmp(cmd, "listmail") == 0) {
         listmail_cmd(tid);
-<<<<<<< HEAD
     } else if(starts_with(cmd, "readmail") == 0) {
         // check for valid arguements
         readmail_cmd(tid, cmd);
@@ -152,7 +151,6 @@ void run_command(int tid, char* cmd) {
         if(check_args(cmd, 3) == true) {
             start_match(tid, cmd);
         }
-=======
     } else if (starts_with(cmd, "readmail") == 0) {
         if (check_args(cmd, 2) == true)
             readmail_cmd(tid, cmd);
@@ -168,7 +166,6 @@ void run_command(int tid, char* cmd) {
             passwd_cmd(tid, cmd);
         else
             my_write(client[tid].cli_sock, "Password must be one word", 25);
->>>>>>> e3cce0d483e1bf221a7ebb00e110f73a0487d5c9
     } else {
         //This can be a game move
         //First check if a game is in progress
