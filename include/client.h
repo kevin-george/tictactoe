@@ -19,14 +19,13 @@ typedef struct client_t{
     int game_id;
     int game_time_limit;
     bool game_turn;
+    int games_played;
+    int games_won;
     bool is_observing;
     int observe_match_num;
 } client_t;
 
 // pThread
-void close_client(int tid);
 void *start_client(void *arg);
-void reset_client(int tid);
-bool check_online_status(int tid, char *user_id);
 
 #endif
