@@ -155,7 +155,7 @@ void run_command(int tid, char* cmd) {
         if(client[tid].game_id >= 0) {
             //If yes, perform move
             if(make_a_move(tid, cmd) == -1) {
-                strcpy(msg, "Invalid move.");
+                strcpy(msg, "Invalid move. Use A2, B3 etc");
                 my_write(cli_sock, msg, strlen(msg));
             }
             return;
