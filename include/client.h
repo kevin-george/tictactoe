@@ -26,6 +26,9 @@ typedef struct client_t{
 } client_t;
 
 // pThread
-void *start_client(void *arg);
+-void close_client(int tid);
+ void *start_client(void *arg);
+-void reset_client(int tid);
+-bool check_online_status(int tid, char *user_id);
 
 #endif
