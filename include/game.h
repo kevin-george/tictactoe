@@ -1,17 +1,20 @@
 #ifndef _H_GAME
 #define _H_GAME
 
-#include <login.h>
-
 typedef struct game {
-	char player1_id[USERID_LENGTH];
-	char player2_id[USERID_LENGTH];
+	//These store the user id of players
+	int player1_tid;
+	int player2_tid;
 	int no_of_moves;
+	//This stores the moves b/w
 	char game_grid[3][3];
-    int observers[20];
+    //This stores the TID of observers
+	int observers[20][1];
+	int observer_count;
 } game;
 
 game instances[10];
+//This is initalized to -1
 int game_count;
 
 void list_games(int cli_sock);
