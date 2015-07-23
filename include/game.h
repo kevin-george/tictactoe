@@ -9,11 +9,12 @@ typedef struct game {
 	//This stores the moves b/w
 	char game_grid[3][3];
     //This stores the TID of observers
-	int observers[20][1];
+	int observers[20];
 	int observer_count;
+    int winner_tid;
 } game;
 
-game instances[10];
+struct game instances[10];
 //This is initalized to -1
 int game_count;
 

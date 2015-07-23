@@ -90,7 +90,7 @@ void run_command(int tid, char* cmd) {
     } else if(strcmp(cmd, "help") == 0) {
         print_help(cli_sock);
     } else if(starts_with(cmd, "tell") == 0) {
-        tell_cmd(tid, cmd);
+        tell_cmd(cli_sock, cmd);
     } else if(starts_with(cmd, "shout") == 0) {
         shout_cmd(tid, cmd);
     } else if(strcmp(cmd, "quiet") == 0) {
@@ -98,76 +98,48 @@ void run_command(int tid, char* cmd) {
     } else if(strcmp(cmd, "nonquiet") == 0) {
         nonquiet_cmd(tid);
     } else if(starts_with(cmd, "block") == 0) {
-        if (check_args(cmd, 2) == true)
-            block_cmd(tid, cmd);
-        else
-            my_write(cli_sock, "Incorrect format", 16);
+        block_cmd(tid, cmd);
     } else if(starts_with(cmd, "unblock") == 0) {
-        if (check_args(cmd, 2) == true)
-            unblock_cmd(tid, cmd);
-        else
-            my_write(cli_sock, "Incorrect format", 16);
+        unblock_cmd(tid, cmd);
     } else if(starts_with(cmd, "mail") == 0) {
         mail_cmd(tid, cmd);
     } else if(strcmp(cmd, "listmail") == 0) {
         listmail_cmd(tid);
     } else if(starts_with(cmd, "readmail") == 0) {
         // check for valid arguements
-        if (check_args(cmd, 2) == true)
-            readmail_cmd(tid, cmd);
-        else
-            my_write(cli_sock, "Incorrect format", 16); 
+        readmail_cmd(tid, cmd);
     } else if(starts_with(cmd, "deletemail") == 0) {
         // Check for valid arguments 
-        if (check_args(cmd, 2) == true)
-            deletemail_cmd(tid, cmd);
-        else
-            my_write(cli_sock, "Incorrect format", 16);
+        deletemail_cmd(tid, cmd);
     } else if(starts_with(cmd, "game") == 0) {
         list_games(tid);
     } else if(starts_with(cmd, "match") == 0) {
         if(check_args(cmd, 3) == true) {
             start_match(tid, cmd);
-        } 
-    } else if (starts_with(cmd, "observe") == 0) {
-        if (check_args(cmd, 2) == true)
-            observe_cmd(tid, cmd);
-    } else if (strcmp(cmd, "unobserve") == 0) {
-        unobserve_cmd(tid);
-    } else if (starts_with(cmd, "kibitz") == 0) {
-        kibitz_cmd(tid, cmd);
-    } else if (starts_with(cmd, "'") == 0) {
-        comment_cmd(tid, cmd);
-    } else if (starts_with(cmd, "passwd") == 0) {
-        if (check_args(cmd, 2) == true)
-            change_password(tid, cmd);
-        else
-            my_write(cli_sock, "Incorrect format", 16);
-    }else {
+        }
+    } else {
+        //This can be a game move
+        //First check if a game is in progress
+        if(client[tid].game_id >= 0) {
+            //If yes, perform move
+            if(make_a_move(tid, cmd) == -1) {
+                strcpy(msg, "Invalid move. Use A2, B3 etc");
+                my_write(cli_sock, msg, strlen(msg));
+            }
+            return;
+        }
         //If no, its an unsupported command
         if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
                 && cmd[0] != '\0') {
             strcpy(msg, "Command not supported.");
             my_write(cli_sock, msg, strlen(msg));
         }
-        //This can be a game move
-        //First check if a game is in progress
-        if(client[tid].game_id >= 0) {
-            //If yes, perform move
-            if(make_a_move(tid, cmd) == -1) {
-                strcpy(msg, "Invalid move.");
-                my_write(cli_sock, msg, strlen(msg));
-            }
-            return;
-        }
-        
     }
 }
 
 void close_client(int tid) {
     my_close(client[tid].cli_sock);
     client[tid].cli_sock = -1;
-    memset(client[tid].user_id, 0, USERID_LENGTH);
 }
 
 // TODO: if one thread closes, all threads and server closes
@@ -183,8 +155,6 @@ void *start_client(void *arg) {
     int tid = *((int*)arg);
     client[tid].tid = tid;
 
-
-
     while(true) {
         // Idle till connection is made
         client[tid].cli_sock = cli_sock = 
@@ -193,11 +163,16 @@ void *start_client(void *arg) {
         printf("Client connected to child %d <socket = %d machine = %s, port = %x, %x.>\n", 
             tid, cli_sock, inet_ntoa(cli_addr.sin_addr), cli_addr.sin_port, ntohs(cli_addr.sin_port));
 
+        client[tid].is_quiet = false;
+        client[tid].game_on = false;
+        client[tid].game_turn = false;
+        client[tid].game_id = -1;
+        strcpy(client[tid].user_id, "");
+        
         // Login
         my_write(cli_sock, "\n\n\nusername(guest): ", 20);
         my_read(cli_sock, user_id, USERID_LENGTH);
         //If user didn't enter anything, we give them a guest user_id
-        //printf("checking name\n");
         if(user_id[0] == '\0') {
             set_userid(tid, "guest");
         } else {
@@ -205,16 +180,8 @@ void *start_client(void *arg) {
             my_read(cli_sock, passwd, PASSWORD_LENGTH);
             // The user is trying to login, authenticate who they are
             if(authenticate_user(user_id, passwd) == 0) {
-                // Check if user is already online
-                if (check_online_status(tid, user_id) == false) {
-                    set_userid(tid, user_id);
-                } else {
-                    my_write(cli_sock, "Userid is already online\n", 25);
-                    close_client(tid);
-                    continue;
-                }
+                set_userid(tid, user_id);
             }
-
             else {
                 strcpy(msg, "Login failed!! \nThank you for using Online Tic-tac-toe Server.\
                     \nSee you next time\n\n");
@@ -231,12 +198,6 @@ void *start_client(void *arg) {
             my_write(cli_sock, msg, strlen(msg));
         }
         my_write(cli_sock, "\n\n", 2);
-
-        // new client, not observing anything. 
-        reset_client(tid);
-
-        // check messages
-        check_messages(tid);
 
         do {  // Game loop
             sprintf(msg, "\n<%s: %d> ", get_userid(tid), command_counter);
@@ -260,31 +221,6 @@ void *start_client(void *arg) {
             ++command_counter;
         } while(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0);
 
-
         close_client(tid);
     }
 }
-
-
-void reset_client(int tid) {
-    client[tid].is_quiet = false;
-    client[tid].game_on = false;
-    client[tid].game_turn = false;
-    client[tid].game_id = -1;
-    client[tid].is_observing = false;
-    client[tid].observe_match_num = -1;
-}
-
-bool check_online_status(int tid, char *user_id) {
-    for (int i = 0; i < CLIENT_SIZE; ++i) {
-        if (client[i].cli_sock != -1) {
-            if (strcmp(user_id, client[i].user_id) == 0) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-
-
