@@ -12,9 +12,9 @@ Use any TCP client like telnet to connect on designated port.
 - ~~Messaging module~~
   - ~~Tell~~
   - ~~Shout~~
-- Mail
-- Listmail
-- readmail
+- ~~Mail~~
+- ~~Listmail~~
+- ~~readmail~~
 - Game
   - Resign
   - Refresh

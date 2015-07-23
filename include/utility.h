@@ -6,6 +6,7 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <stdbool.h>
 
 // MISC
 void my_error(char *err);

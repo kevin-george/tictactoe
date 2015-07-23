@@ -1,6 +1,7 @@
 #ifndef _H_MESSAGE
 #define _H_MESSAGE
 
+void run_cmd(int tid, char* cmd);
 void tell_cmd(int fd, char* cmd);
 void shout_cmd(int tid, char* cmd);
 void quiet_cmd(int tid);
@@ -12,5 +13,5 @@ void listmail_cmd(int tid);
 void readmail_cmd(int tid, char* cmd);
 void deletemail_cmd(int tid, char* cmd);
 void create_mail_file(const char* user_id);
-
+void passwd_cmd(int tid, char* cmd);
 #endif

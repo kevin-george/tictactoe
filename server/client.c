@@ -78,16 +78,50 @@ void who_cmd(int fd) {
     my_write(fd, send_msg, strlen(send_msg));
 }
 
+void passwd_cmd(int tid, char *cmd) {
+    FILE *infile, *copy_infile;
+    char new_passwd[PASSWORD_LENGTH], buf[30];
+    char file_path[] = "./login/login_details.dat";
+    char copy_path[] = "./login/copy.dat";
+    sscanf(cmd, "%s %s", buf, new_passwd);
+
+    if ( (copy_infile = fopen(copy_path, "a+")) == NULL) {
+        my_error("Unable to open copy passwd file");
+    }
+
+    if ( (infile = fopen(file_path, "a+")) == NULL) {
+        my_error("Unable to open passwd file");
+    } else {
+        char id[USERID_LENGTH], pass[PASSWORD_LENGTH];
+        while (fscanf(infile, "%s %s\n", id, pass) != EOF) {
+            if (strcmp(id, client[tid].user_id) == 0)
+                strcpy(pass, new_passwd);
+            fprintf(copy_infile, "%s %s\n", id, pass);
+        }
+
+        my_write(client[tid].cli_sock, "Password changed.", 17);
+
+        fclose(copy_infile);
+        fclose(infile);
+        remove(file_path);
+        rename(copy_path, file_path);
+    }
+
+}
+
 void run_command(int tid, char* cmd) {
     char msg[MSG_LENGTH];
     int cli_sock = client[tid].cli_sock;
 
     //printf ("command:%s\n", cmd);
     if(starts_with(cmd, "register") == 0) {
-        register_cmd(cli_sock, cmd);
+        if (check_args(cmd, 3) == true)
+            register_cmd(cli_sock, cmd);
+        else
+            my_write(client[tid].cli_sock, "Invalid format", 14);
     } else if(strcmp(cmd, "who") == 0) {
         who_cmd(cli_sock);
-    } else if(strcmp(cmd, "help") == 0) {
+    } else if(strcmp(cmd, "help") == 0 || strcmp(cmd, "?") == 0) {
         print_help(cli_sock);
     } else if(starts_with(cmd, "tell") == 0) {
         tell_cmd(cli_sock, cmd);
@@ -105,6 +139,7 @@ void run_command(int tid, char* cmd) {
         mail_cmd(tid, cmd);
     } else if(strcmp(cmd, "listmail") == 0) {
         listmail_cmd(tid);
+<<<<<<< HEAD
     } else if(starts_with(cmd, "readmail") == 0) {
         // check for valid arguements
         readmail_cmd(tid, cmd);
@@ -117,6 +152,23 @@ void run_command(int tid, char* cmd) {
         if(check_args(cmd, 3) == true) {
             start_match(tid, cmd);
         }
+=======
+    } else if (starts_with(cmd, "readmail") == 0) {
+        if (check_args(cmd, 2) == true)
+            readmail_cmd(tid, cmd);
+        else
+            my_write(client[tid].cli_sock, "Invalid format", 14);
+    } else if (starts_with(cmd, "deletemail") == 0) {
+        if (check_args(cmd, 2) == true)
+            deletemail_cmd(tid, cmd);
+        else
+            my_write(client[tid].cli_sock, "Invalid format", 14);
+    } else if (starts_with(cmd, "passwd") == 0) {
+        if (check_args(cmd, 2) == true)
+            passwd_cmd(tid, cmd);
+        else
+            my_write(client[tid].cli_sock, "Password must be one word", 25);
+>>>>>>> e3cce0d483e1bf221a7ebb00e110f73a0487d5c9
     } else {
         //This can be a game move
         //First check if a game is in progress
