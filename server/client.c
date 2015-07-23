@@ -90,7 +90,7 @@ void run_command(int tid, char* cmd) {
     } else if(strcmp(cmd, "help") == 0) {
         print_help(cli_sock);
     } else if(starts_with(cmd, "tell") == 0) {
-        tell_cmd(cli_sock, cmd);
+        tell_cmd(tid, cmd);
     } else if(starts_with(cmd, "shout") == 0) {
         shout_cmd(tid, cmd);
     } else if(strcmp(cmd, "quiet") == 0) {
@@ -117,7 +117,22 @@ void run_command(int tid, char* cmd) {
         if(check_args(cmd, 3) == true) {
             start_match(tid, cmd);
         }
+    } else if (starts_with(cmd, "observe") == 0) {
+        if (check_args(cmd, 2) == true)
+            observe_cmd(tid, cmd);
+    } else if (strcmp(cmd, "unobserve") == 0) {
+        unobserve_cmd(tid);
+    } else if (starts_with(cmd, "kibitz") == 0) {
+        kibitz_cmd(tid, cmd);
+    } else if (starts_with(cmd, "'") == 0) {
+        comment_cmd(tid, cmd);
     } else {
+        //If no, its an unsupported command
+        if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
+                && cmd[0] != '\0') {
+            strcpy(msg, "Command not supported.");
+            my_write(cli_sock, msg, strlen(msg));
+        }
         //This can be a game move
         //First check if a game is in progress
         if(client[tid].game_id >= 0) {
@@ -128,18 +143,14 @@ void run_command(int tid, char* cmd) {
             }
             return;
         }
-        //If no, its an unsupported command
-        if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
-                && cmd[0] != '\0') {
-            strcpy(msg, "Command not supported.");
-            my_write(cli_sock, msg, strlen(msg));
-        }
+        
     }
 }
 
 void close_client(int tid) {
     my_close(client[tid].cli_sock);
     client[tid].cli_sock = -1;
+    memset(client[tid].user_id, 0, USERID_LENGTH);
 }
 
 // TODO: if one thread closes, all threads and server closes
@@ -154,6 +165,7 @@ void *start_client(void *arg) {
 
     int tid = *((int*)arg);
     client[tid].tid = tid;
+
 
 
     while(true) {
@@ -176,8 +188,16 @@ void *start_client(void *arg) {
             my_read(cli_sock, passwd, PASSWORD_LENGTH);
             // The user is trying to login, authenticate who they are
             if(authenticate_user(user_id, passwd) == 0) {
-                set_userid(tid, user_id);
+                // Check if user is already online
+                if (check_online_status(tid, user_id) == false) {
+                    set_userid(tid, user_id);
+                } else {
+                    my_write(cli_sock, "Userid is already online\n", 25);
+                    close_client(tid);
+                    continue;
+                }
             }
+
             else {
                 strcpy(msg, "Login failed!! \nThank you for using Online Tic-tac-toe Server.\
                     \nSee you next time\n\n");
@@ -194,6 +214,12 @@ void *start_client(void *arg) {
             my_write(cli_sock, msg, strlen(msg));
         }
         my_write(cli_sock, "\n\n", 2);
+
+        // new client, not observing anything. 
+        reset_client(tid);
+
+        // check messages
+        check_messages(tid);
 
         do {  // Game loop
             sprintf(msg, "\n<%s: %d> ", get_userid(tid), command_counter);
@@ -217,6 +243,31 @@ void *start_client(void *arg) {
             ++command_counter;
         } while(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0);
 
+
         close_client(tid);
     }
 }
+
+
+void reset_client(int tid) {
+    client[tid].is_quiet = false;
+    client[tid].game_on = false;
+    client[tid].game_turn = false;
+    client[tid].game_id = -1;
+    client[tid].is_observing = false;
+    client[tid].observe_match_num = -1;
+}
+
+bool check_online_status(int tid, char *user_id) {
+    for (int i = 0; i < CLIENT_SIZE; ++i) {
+        if (client[i].cli_sock != -1) {
+            if (strcmp(user_id, client[i].user_id) == 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
+

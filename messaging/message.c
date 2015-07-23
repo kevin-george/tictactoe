@@ -9,15 +9,18 @@
 #include "server.h"
 #include "client.h"
 #include "message.h"
+#include "game.h"
 
-void tell_cmd(int fd, char *cmd) {
+void tell_cmd(int tid, char *cmd) {
     int i, recv_cli_sock;
-    char buf[20];
+    char buf[20], buf2[30];
     char recv_id[USERID_LENGTH];
     char msg[MSG_LENGTH];
     char send_msg[MSG_LENGTH];
 
-    sscanf(cmd, "%s %s %s", buf, recv_id, msg);
+    sscanf(cmd, "%s %s", buf, recv_id);
+    
+    
 
     for(i = 0; i < CLIENT_SIZE; ++i) {     // check if client exists
         if(strcmp(recv_id, client[i].user_id) == 0) {
@@ -28,20 +31,22 @@ void tell_cmd(int fd, char *cmd) {
 
     if(i == CLIENT_SIZE) {     // client does not exist
         sprintf(msg, "User %s is not online", recv_id);
-        my_write(fd, msg, strlen(msg));
+        my_write(client[tid].cli_sock, msg, strlen(msg));
     } else {
-        sprintf(send_msg, "%s: %s", recv_id, msg);
+        //sprintf(send_msg, "%s: %s", recv_id, msg);
+        sprintf(buf2, "tell %s ", recv_id);
+        sprintf(send_msg, "%s: ", client[tid].user_id);
+        strcat(send_msg, (cmd + strlen(buf2)));
         my_write(recv_cli_sock, send_msg, strlen(send_msg));
     }
 }
 
 void shout_cmd(int tid, char *cmd) {
-    char buf[20];
-    char send_msg[MSG_LENGTH], msg[MSG_LENGTH];
+    char send_msg[MSG_LENGTH];
 
     // Format message
-    sscanf(cmd, "%s %s", buf, msg);
-    sprintf(send_msg, "!shout! *%s*: %s\n", client[tid].user_id, msg);
+    sprintf(send_msg, "!shout! *%s*: ", client[tid].user_id);
+    strcat(send_msg, (cmd + strlen("shout ")));
 
     for(int i = 0; i < CLIENT_SIZE; ++i) {
         if(client[i].cli_sock != -1 && client[i].is_quiet == false)
@@ -354,6 +359,131 @@ void create_mail_file(const char *user_id) {
 
     fclose(outfile);
 }
+
+void observe_cmd(int tid, char *cmd) {
+
+    if (client[tid].is_observing == false) {
+        int inst_idx;
+        char buf[10], msg[50];
+        int observer_count;
+        sscanf(cmd, "%s %d", buf, &inst_idx);
+
+        observer_count = instances[inst_idx].observer_count++;
+        instances[inst_idx].observers[observer_count][0] = tid;
+
+        client[tid].observe_match_num = inst_idx;
+        client[tid].is_observing = true;
+
+        sprintf(msg, "Observing game %d", inst_idx);
+        my_write(client[tid].cli_sock, msg, strlen(msg));
+    } else {
+        my_write(client[tid].cli_sock, "Unobserve before observing another game", 39);
+    }
+}
+
+void unobserve_cmd(int tid) {
+    char msg[50]; 
+    int match_num = client[tid].observe_match_num;
+    int observer_count = instances[match_num].observer_count;
+    if (client[tid].is_observing == true) {
+        for (int i = 0; i < observer_count; ++i) {
+            if (instances[match_num].observers[i][0] == tid) {
+                instances[match_num].observers[i][0] = -1;
+                client[tid].observe_match_num = -1;
+                client[tid].is_observing = false;
+            }
+        }
+        sprintf(msg, "Unobserving game %d", match_num);
+        my_write(client[tid].cli_sock, msg, strlen(msg));
+    } else {
+        // write to user
+        my_write(client[tid].cli_sock, "You are not observing anything", 30);
+    }
+}
+
+void kibitz_cmd(int tid, char *cmd) {
+    if (client[tid].is_observing == true) {
+        int observe_match_num = client[tid].observe_match_num;
+        int player1_tid = instances[observe_match_num].player1_tid;
+        int player2_tid = instances[observe_match_num].player2_tid;
+        char msg[MSG_LENGTH];
+        sprintf(msg, "Kibitz* %s:", client[tid].user_id);
+        strcat(msg, (cmd + strlen("kibitz ")));
+
+        my_write(client[player1_tid].cli_sock, msg, strlen(msg));
+        my_write(client[player2_tid].cli_sock, msg, strlen(msg));
+
+        for (int i = 0; i < instances[observe_match_num].observer_count; ++i) {
+            my_write(client[instances[observe_match_num].observers[i][0]].cli_sock, msg, strlen(msg));
+        }
+    } else {
+        my_write(client[tid].cli_sock, "You are not observing a game", 28);
+    }
+}
+
+void comment_cmd(int tid, char *cmd) {
+    if (client[tid].game_on == true) {
+        int match_num = client[tid].game_id;
+        int player1_tid = instances[match_num].player1_tid;
+        int player2_tid = instances[match_num].player2_tid;
+        char msg[MSG_LENGTH];
+        sprintf(msg, "'* %s:", client[tid].user_id);
+
+        strcat(msg, (cmd + strlen("' ")));
+
+        my_write(client[player1_tid].cli_sock, msg, strlen(msg));
+        my_write(client[player2_tid].cli_sock, msg, strlen(msg));
+
+        for (int i = 0; i < instances[match_num].observer_count; ++i) {
+            my_write(client[instances[match_num].observers[i][0]].cli_sock, msg, strlen(msg));
+        }
+    } else {
+        my_write(client[tid].cli_sock, "You are not playing a game", 26);
+    }
+}
+
+void check_messages(int tid) {
+    FILE *infile;
+    char line[100], buf[30], buf2[30];
+    char msg[MSG_LENGTH], mail_path[50];
+    int num_unread = 0;
+
+    sprintf(mail_path, "./mail/%s.dat", client[tid].user_id);
+
+    if ( (infile = fopen(mail_path, "r")) == NULL) {
+        my_error("Unable to open readmail");
+    } else {
+        fgets(line, 100, infile);
+
+        while (fgets(line, 100, infile) != NULL) {
+            sscanf(line, "%s %s", buf, buf2);
+            if (strcmp(buf, "status") == 0) {
+                if (strcmp(buf2, "N") == 0) {
+                    ++num_unread;
+                }
+            }
+        }
+        if (num_unread == 0) {
+            sprintf(msg, "You have no unread messages.");
+            my_write(client[tid].cli_sock, msg, strlen(msg));
+        } else {
+            sprintf(msg, "You have %d unread messages.", num_unread);
+            my_write(client[tid].cli_sock, msg, strlen(msg));
+        }
+        fclose(infile);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 

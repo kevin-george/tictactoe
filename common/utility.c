@@ -148,7 +148,7 @@ int my_write(int fd, const void *vptr, size_t n) {
     nleft -= nwritten;
     ptr += nwritten;
   }
-
+  // Should this be n - nleft
   return n;
 }
 
