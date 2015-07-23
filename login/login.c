@@ -48,3 +48,35 @@ int authenticate_user(char* user_id, char* passwd) {
   }
   return -1;
 }
+
+void change_password(int tid, char *cmd) {
+    FILE *infile, *copy_file;
+    char new_passwd[PASSWORD_LENGTH], buf[20];
+    char line[100];
+
+    sscanf(cmd, "%s %s", buf, new_passwd);
+
+    if ( (copy_file = fopen("./login/copy.dat", "w")) == NULL) {
+        my_error("Unable to open copy.dat");
+    }
+
+    if ( (infile = fopen("./login/login_details.dat", "r")) == NULL) {
+        fclose(copy_file);
+        my_error("Unable to open login_details.dat");
+    } else {
+        char id[USERID_LENGTH], passwd[PASSWORD_LENGTH];
+        while (fscanf(infile, "%s %s[^\n]", id, passwd) != EOF) {
+            if (strcmp(id, client[tid].user_id) == 0)
+                sprintf(line, "%s %s", id, new_passwd);
+            else
+                sprintf(line, "%s %s", id, passwd);
+
+            fprintf(copy_file, "%s\n", line);
+        }
+        fclose(infile);
+        fclose(copy_file);
+        remove("./login/login_details.dat");
+        rename("./login/copy.dat", "./login/login_details.dat");
+        my_write(client[tid].cli_sock, "Password changed.", 17);
+    }
+}

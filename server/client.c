@@ -98,25 +98,37 @@ void run_command(int tid, char* cmd) {
     } else if(strcmp(cmd, "nonquiet") == 0) {
         nonquiet_cmd(tid);
     } else if(starts_with(cmd, "block") == 0) {
-        block_cmd(tid, cmd);
+        if (check_args(cmd, 2) == true)
+            block_cmd(tid, cmd);
+        else
+            my_write(cli_sock, "Incorrect format", 16);
     } else if(starts_with(cmd, "unblock") == 0) {
-        unblock_cmd(tid, cmd);
+        if (check_args(cmd, 2) == true)
+            unblock_cmd(tid, cmd);
+        else
+            my_write(cli_sock, "Incorrect format", 16);
     } else if(starts_with(cmd, "mail") == 0) {
         mail_cmd(tid, cmd);
     } else if(strcmp(cmd, "listmail") == 0) {
         listmail_cmd(tid);
     } else if(starts_with(cmd, "readmail") == 0) {
         // check for valid arguements
-        readmail_cmd(tid, cmd);
+        if (check_args(cmd, 2) == true)
+            readmail_cmd(tid, cmd);
+        else
+            my_write(cli_sock, "Incorrect format", 16); 
     } else if(starts_with(cmd, "deletemail") == 0) {
         // Check for valid arguments 
-        deletemail_cmd(tid, cmd);
+        if (check_args(cmd, 2) == true)
+            deletemail_cmd(tid, cmd);
+        else
+            my_write(cli_sock, "Incorrect format", 16);
     } else if(starts_with(cmd, "game") == 0) {
         list_games(tid);
     } else if(starts_with(cmd, "match") == 0) {
         if(check_args(cmd, 3) == true) {
             start_match(tid, cmd);
-        }
+        } 
     } else if (starts_with(cmd, "observe") == 0) {
         if (check_args(cmd, 2) == true)
             observe_cmd(tid, cmd);
@@ -126,7 +138,12 @@ void run_command(int tid, char* cmd) {
         kibitz_cmd(tid, cmd);
     } else if (starts_with(cmd, "'") == 0) {
         comment_cmd(tid, cmd);
-    } else {
+    } else if (starts_with(cmd, "passwd") == 0) {
+        if (check_args(cmd, 2) == true)
+            change_password(tid, cmd);
+        else
+            my_write(cli_sock, "Incorrect format", 16);
+    }else {
         //If no, its an unsupported command
         if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
                 && cmd[0] != '\0') {

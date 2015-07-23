@@ -86,8 +86,11 @@ void block_cmd(int tid, char *cmd) {    // Not tested
             }
         }
 
-        if (is_blocked == false)
+        if (is_blocked == false) {
             fprintf(in, "%s\n", user_id);
+            sprintf(msg, "User %s blocked.", user_id);
+            my_write(client[tid].cli_sock, msg, strlen(msg));
+        }
     }
 
     fclose(in);
