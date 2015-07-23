@@ -1,7 +1,6 @@
 #ifndef _H_MESSAGE
 #define _H_MESSAGE
 
-void run_cmd(int tid, char* cmd);
 void tell_cmd(int fd, char* cmd);
 void shout_cmd(int tid, char* cmd);
 void quiet_cmd(int tid);
