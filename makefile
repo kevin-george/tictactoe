@@ -1,10 +1,10 @@
 CC=gcc
-CFLAGS=-Wall -std=c99 -pedantic -lpthread
+CFLAGS=-g -Wall -std=c99 -pedantic -lpthread
 INCLUDES=-I./include
 
 all: server_exec
 
-server_exec: server/server.c server/client.c login/login.c common/utility.c messaging/message.c
+server_exec: server/server.c server/client.c login/login.c common/utility.c messaging/message.c gameplay/game.c
 	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $@
 
 clean:

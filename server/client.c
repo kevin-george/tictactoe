@@ -8,6 +8,7 @@
 #include "utility.h"
 #include "login.h"
 #include "message.h"
+#include "game.h"
 
 void print_help(int fd) {
     char full_string[1500];
@@ -88,29 +89,45 @@ void run_command(int tid, char* cmd) {
         who_cmd(cli_sock);
     } else if(strcmp(cmd, "help") == 0) {
         print_help(cli_sock);
-    } else if (starts_with(cmd, "tell") == 0) {
+    } else if(starts_with(cmd, "tell") == 0) {
         tell_cmd(cli_sock, cmd);
-    } else if (starts_with(cmd, "shout") == 0) {
+    } else if(starts_with(cmd, "shout") == 0) {
         shout_cmd(tid, cmd);
-    } else if (strcmp(cmd, "quiet") == 0) {
+    } else if(strcmp(cmd, "quiet") == 0) {
         quiet_cmd(tid);
-    } else if (strcmp(cmd, "nonquiet") == 0) {
+    } else if(strcmp(cmd, "nonquiet") == 0) {
         nonquiet_cmd(tid);
-    } else if (starts_with(cmd, "block") == 0) {
+    } else if(starts_with(cmd, "block") == 0) {
         block_cmd(tid, cmd);
-    } else if (starts_with(cmd, "unblock") == 0) {
+    } else if(starts_with(cmd, "unblock") == 0) {
         unblock_cmd(tid, cmd);
-    } else if (starts_with(cmd, "mail") == 0) {
+    } else if(starts_with(cmd, "mail") == 0) {
         mail_cmd(tid, cmd);
-    } else if (strcmp(cmd, "listmail") == 0) {
+    } else if(strcmp(cmd, "listmail") == 0) {
         listmail_cmd(tid);
-    } else if (starts_with(cmd, "readmail") == 0) {
+    } else if(starts_with(cmd, "readmail") == 0) {
         // check for valid arguements
         readmail_cmd(tid, cmd);
-    } else if (starts_with(cmd, "deletemail") == 0) {
+    } else if(starts_with(cmd, "deletemail") == 0) {
         // Check for valid arguments 
         deletemail_cmd(tid, cmd);
+    } else if(starts_with(cmd, "game") == 0) {
+        list_games(tid);
+    } else if(starts_with(cmd, "match") == 0) {
+        if(check_args(cmd, 3) == true) {
+            start_match(tid, cmd);
+        }
     } else {
+        //This can be a game move
+        //First check if a game is in progress
+        if(client[tid].game_id >= 0) {
+            //If yes, perform move
+            if(make_a_move(tid, cmd) == -1) {
+                strcpy(msg, "Invalid move.");
+                my_write(cli_sock, msg, strlen(msg));
+            }
+        }
+        //If no, its an unsupported command
         if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
                 && cmd[0] != '\0') {
             strcpy(msg, "Command not supported.");

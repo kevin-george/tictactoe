@@ -345,9 +345,9 @@ void create_mail_file(const char *user_id) {
     FILE *outfile;
     char path[100];
 
-    sprintf(path, "./mail/%s.dat", user_id);
+    sprintf(path, "messaging/%s.dat", user_id);
 
-    if ( (outfile = fopen(path, "w")) == NULL)
+    if((outfile = fopen(path, "w")) == NULL)
         my_error("Unable to open mail file");
     else
         fprintf(outfile, "Your messages:\n");

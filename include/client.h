@@ -13,6 +13,12 @@ typedef struct client_t{
 	int tid;
 	bool is_quiet;
 	char user_id[USERID_LENGTH];
+    //Game related vars
+    bool game_on;
+    char player_type;
+    int game_id;
+    int game_time_limit;
+    bool game_turn;
 } client_t;
 
 // pThread

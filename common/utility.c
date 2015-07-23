@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include "utility.h"
 
@@ -47,6 +48,26 @@ int fpeek(FILE *f) {
 
     return c;
 }
+
+bool check_args(char *cmd, int argc) {
+    int count = 0;
+    char *pch;
+    char *temp = (char*)malloc(sizeof(char)*strlen(cmd));
+    strcpy(temp, cmd);
+
+    pch = strtok(temp, " ");
+    ++count;
+    while ( (pch = strtok(NULL, " ")) != NULL)
+        ++count;
+
+    free(temp);
+    printf("count:%d argc:%d\n", count, argc);
+    if (count == argc)
+        return true;
+    else
+        return false;
+}
+
 /*-----------------------------------------------------------*/
 /*                            IPC                            */
 /*-----------------------------------------------------------*/

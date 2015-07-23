@@ -8,6 +8,7 @@
 
 #include "server.h"
 #include "utility.h"
+#include "game.h"
 
 int main(int argc, char * argv[]) {
     int *tid_ptr;
@@ -35,12 +36,16 @@ int main(int argc, char * argv[]) {
 
     my_listen(listen_fd, 5);
 
-    for (int i = 0; i < CLIENT_SIZE; ++i) {     // Setup client data
+    for(int i = 0; i < CLIENT_SIZE; ++i) {     // Setup client data
         client[i].cli_sock = -1;                // -1 indicates available entry
         client[i].is_quiet = false;
+        client[i].game_on = false;
+        client[i].game_turn = false;
     }
 
-    for (int i = 0; i < CLIENT_SIZE; ++i) {
+    game_count = -1;
+
+    for(int i = 0; i < CLIENT_SIZE; ++i) {
         tid_ptr = (int*)malloc(sizeof(int));
         *tid_ptr = i;
         pthread_create(&tid, NULL, &start_client, (void*)tid_ptr);
