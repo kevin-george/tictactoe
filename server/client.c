@@ -144,23 +144,24 @@ void run_command(int tid, char* cmd) {
         else
             my_write(cli_sock, "Incorrect format", 16);
     }else {
-        //If no, its an unsupported command
-        if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
-                && cmd[0] != '\0') {
-            strcpy(msg, "Command not supported.");
-            my_write(cli_sock, msg, strlen(msg));
-        }
         //This can be a game move
         //First check if a game is in progress
-        if(client[tid].game_id >= 0) {
-            //If yes, perform move
-            if(make_a_move(tid, cmd) == -1) {
-                strcpy(msg, "Invalid move. Use A2, B3 etc");
+        if(cmd[0] != '\0') {
+            if(client[tid].game_id >= 0) {
+                //If yes, perform move
+                if(make_a_move(tid, cmd) == -1) {
+                    strcpy(msg, "Invalid move. Use A2, B3 etc");
+                    my_write(cli_sock, msg, strlen(msg));
+                }
+                return;
+            }
+            //If no, its an unsupported command
+            if(strcmp(cmd, "exit") != 0 && strcmp(cmd, "quit") != 0
+                    && cmd[0] != '\0') {
+                sprintf(msg, "Command %s not supported.", cmd);
                 my_write(cli_sock, msg, strlen(msg));
             }
-            return;
         }
-        
     }
 }
 
@@ -236,7 +237,8 @@ void *start_client(void *arg) {
         reset_client(tid);
 
         // check messages
-        check_messages(tid);
+        if(strcmp(get_userid(tid), "guest") != 0)
+            check_messages(tid);
 
         do {  // Game loop
             sprintf(msg, "\n<%s: %d> ", get_userid(tid), command_counter);
