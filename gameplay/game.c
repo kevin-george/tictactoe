@@ -284,6 +284,12 @@ void update_and_reset(int tid, int won) {
     client[tid].game_turn = false;
     client[tid].game_on = false;
     client[tid].game_id = -1;
+
+    char num_won[3], num_loss[3];
+    sprintf(num_won, "%d", client[tid].games_won);
+    sprintf(num_loss, "%d", (client[tid].games_played - client[tid].games_won));
+    update_stats(client[tid].user_id, "Wins:", num_won);
+    update_stats(client[tid].user_id, "Loses:", num_loss);
 }
 
 int make_a_move(int tid, char* cmd) {
