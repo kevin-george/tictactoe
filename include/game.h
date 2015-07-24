@@ -24,6 +24,8 @@ int game_count;
 void list_games(int cli_sock);
 void start_match(int tid, char* cmd); 
 int make_a_move(int cli_sock, char* cmd);
-
+void create_stats(char *user_id);
+void print_stats(int tid, char *cmd);
+void update_stats(char *user_id, char *category, char *value);
 #endif
 
