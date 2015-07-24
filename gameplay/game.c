@@ -1,13 +1,13 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <time.h>
 
 #include "game.h"
 #include "server.h"
 #include "client.h"
 #include "utility.h"
-#include "login.h"
+#include "microtime.h"
+
 
 #define YES 1
 #define NO 0
@@ -23,7 +23,7 @@ void print_game(int player1, int player2, int first_view, int result, int time_o
         else
             str += sprintf(str, "\nBlack:\t\t%s\t\tWhite:\t\t%s"
                     , client[player1].user_id, client[player2].user_id);
-        str += sprintf(str, "\n Time:\t%f seconds\t\t Time:\t%f seconds\n\n"
+        str += sprintf(str, "\n  Time:\t%.0f seconds\t\t  Time:\t%.0f seconds\n\n"
                 , client[player1].game_time_limit, client[player2].game_time_limit);
     }
 
@@ -45,7 +45,6 @@ void print_game(int player1, int player2, int first_view, int result, int time_o
                 str+= sprintf(str, " by timeout");
         } else
             str += sprintf(str, "\nThe game was a tie");
-        printf("\nResult is %s",game_state);
     }
     fflush(stdout);
 
@@ -127,7 +126,7 @@ void start_match(int tid, char* cmd) {
                         //Print game board
                         print_game(i, tid, YES, NO, NO);
                         //Timer starts for Black
-                        //instances[game_count].game_start = clock();
+                        instances[game_count].game_start = microtime();
                     }
                     break; 
                 }
@@ -141,140 +140,8 @@ void start_match(int tid, char* cmd) {
     }
 }
 
-void create_stats(char *user_id) {
-    FILE *file;
-    char path[50];
+void print_stats(int tid) {
 
-    sprintf(path, "./gameplay/%s_stat.dat", user_id);
-    if ( (file = fopen(path, "a+")) == NULL) {
-        my_error("Cannont open user stat file");
-    } else {
-        fprintf(file, "User: %s\n", user_id);
-        fprintf(file, "Info: none\n");
-        fprintf(file, "Wins: 0\nLoses: 0\n");
-        fprintf(file, "Quiet: no\n");
-        fprintf(file, "Blocked: none\n");
-
-        fclose(file);
-    }
-}
-
-void print_stats(int tid, char *cmd) {
-    FILE *file, *login_file;
-    char path[50], line[50], user_id[USERID_LENGTH], buf[10];
-    char msg[MSG_LENGTH];
-    char *str = msg;
-
-    sscanf(cmd, "%s %s", buf, user_id);
-
-    if ( (login_file = fopen("./login/login_details.dat", "r")) == NULL) {
-        my_error("Unable to open login file");
-    } else {
-        char id[USERID_LENGTH]; char passwd[PASSWORD_LENGTH];
-        bool is_registered = false;
-        while (fscanf(login_file, "%s %s[^\n]", id, passwd) != EOF) {
-            if (strcmp(id, user_id) == 0) {
-                is_registered = true;
-                break;
-            }
-        }
-
-        fclose(login_file);
-
-        if (is_registered == false) {
-            my_write(client[tid].cli_sock, "User does not exist.", 20);
-            return;
-        }
-
-    }
-
-    sprintf(path, "./gameplay/%s_stat.dat", user_id);
-    if ( (file = fopen(path, "a+")) == NULL) {
-        my_error("Cannont open user stat file");
-    } else {
-        while (fgets(line, 50, file) != NULL) {
-            str += sprintf(str, "%s", line);
-        }
-
-        bool is_online = false;
-        for (int i = 0; i < CLIENT_SIZE; ++i) {     // Check if user is online
-            if (client[i].cli_sock != -1) {
-                if (strcmp(user_id, client[i].user_id) == 0) {
-                    is_online = true;
-                    break;
-                }
-            }
-        }
-
-        if (is_online == true)
-            str += sprintf(str, "\n%s is currently online", user_id);
-        else
-            str += sprintf(str, "\n%s is currently offline", user_id);
-
-        my_write(client[tid].cli_sock, msg, strlen(msg));
-        fclose(file);
-    }
-}
-
-void update_stats(char *user_id, char *category, char *value) {
-    FILE *old, *new;
-    char old_path[50], new_path[50];
-    char line[100];
-    char *str;
-    sprintf(old_path, "./gameplay/%s_stat.dat", user_id);
-    sprintf(new_path, "./gameplay/%s_new.dat", user_id);
-
-    if ( (new = fopen(new_path, "a+")) == NULL) {
-        my_error("Unable to open new stats file");
-    }
-
-    if ( (old = fopen(old_path, "r")) == NULL) {
-        fclose(new);
-        my_error("Unable to open new stats file");
-    } else {
-        char buf[30], buf2[30];
-        while (fgets(line, 100, old) != NULL) {
-            str = line;
-            sscanf(line, "%s %s", buf, buf2);
-            if (strcmp(buf, "Blocked:") == 0 && strcmp(category, "Blocked:") == 0) {
-                bool block = true;
-                char *pch;
-                char *blocked_users = (char*)malloc(sizeof(char)*strlen(line)+1);
-                strcpy(blocked_users, line);
-                printf("blocked_users:%s\n", blocked_users);
-                pch = strtok(blocked_users, " ");
-                str += sprintf(str, "%s ", pch);
-                while ((pch = strtok(NULL, " \n"))) {  // Check if user is to be unblocked
-                    if (strcmp(pch, "none") == 0) {
-                        continue;
-                    }
-                    if (strcmp(pch, value) != 0) {  // If on blocked list, skip user
-                        str += sprintf(str, "%s ", pch);
-                    } else {
-                        block = false;
-                    }
-                }
-
-                if (block == true)
-                    str += sprintf(str, "%s\n", value);
-
-                free(blocked_users);
-            } else if (strcmp(buf, "Info:") == 0 && strcmp(category, "Info:") == 0) {
-                if (strcmp(value, "") == 0)
-                    str += sprintf(str, "Info: none\n");
-                else
-                    str += sprintf(str, "Info: %s\n", value);
-            }else if (strcmp(buf, category) == 0) {
-                sprintf(line, "%s %s\n", category, value);
-            }
-            fprintf(new, "%s", line);
-        }
-
-        fclose(new);
-        fclose(old);
-        remove(old_path);
-        rename(new_path, old_path);
-    }
 }
 
 void update_and_reset(int tid, int won) {
@@ -311,15 +178,14 @@ int make_a_move(int tid, char* cmd) {
     //Was he too late?
     int game_id = client[tid].game_id;
     game* instance = &instances[game_id];
-    /*int other_user_tid;
+    int other_user_tid;
     if(tid == instance->player1_tid)
         other_user_tid = instance->player2_tid;
     else
         other_user_tid = instance->player1_tid;
-    double seconds = ((double)(clock() - instance->game_start)) / CLOCKS_PER_SEC;
-    printf("seconds %f ",seconds);
-    fflush(stdout);
+    double seconds = (microtime() - instance->game_start) / 1000000;
     if((seconds) > client[tid].game_time_limit) {
+        game_count--;
         instance->winner_tid = other_user_tid;
         print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, YES);
         for(int count = 0; count < instances[game_id].observer_count; count++) {
@@ -327,9 +193,10 @@ int make_a_move(int tid, char* cmd) {
         }
         update_and_reset(other_user_tid, YES);
         update_and_reset(tid, NO);
+        return 0;
     } else {
-        instance->game_start = clock();
-    }*/
+        instance->game_start = microtime();
+    }
         
     //He wasn't, so upgrade the grid
     int row = (cmd[0] == 'A') ? 0 : (cmd[0] == 'B' ? 1 : 2);
