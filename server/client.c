@@ -268,7 +268,7 @@ void *start_client(void *arg) {
         my_write(cli_sock, "\n\n", 2);
 
         // new client, not observing anything. 
-        //reset_client(tid);
+        reset_client(tid);
 
         // check messages
         if(strcmp(get_userid(tid), "guest") != 0) {
