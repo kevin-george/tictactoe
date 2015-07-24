@@ -1,12 +1,13 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <time.h>
 
 #include "game.h"
 #include "server.h"
 #include "client.h"
 #include "utility.h"
+#include "microtime.h"
+
 
 #define YES 1
 #define NO 0
@@ -22,7 +23,7 @@ void print_game(int player1, int player2, int first_view, int result, int time_o
         else
             str += sprintf(str, "\nBlack:\t\t%s\t\tWhite:\t\t%s"
                     , client[player1].user_id, client[player2].user_id);
-        str += sprintf(str, "\n Time:\t%f seconds\t\t Time:\t%f seconds\n\n"
+        str += sprintf(str, "\n  Time:\t%.0f seconds\t\t  Time:\t%.0f seconds\n\n"
                 , client[player1].game_time_limit, client[player2].game_time_limit);
     }
 
@@ -44,7 +45,6 @@ void print_game(int player1, int player2, int first_view, int result, int time_o
                 str+= sprintf(str, " by timeout");
         } else
             str += sprintf(str, "\nThe game was a tie");
-        printf("\nResult is %s",game_state);
     }
     fflush(stdout);
 
@@ -126,7 +126,7 @@ void start_match(int tid, char* cmd) {
                         //Print game board
                         print_game(i, tid, YES, NO, NO);
                         //Timer starts for Black
-                        //instances[game_count].game_start = clock();
+                        instances[game_count].game_start = microtime();
                     }
                     break; 
                 }
@@ -172,15 +172,14 @@ int make_a_move(int tid, char* cmd) {
     //Was he too late?
     int game_id = client[tid].game_id;
     game* instance = &instances[game_id];
-    /*int other_user_tid;
+    int other_user_tid;
     if(tid == instance->player1_tid)
         other_user_tid = instance->player2_tid;
     else
         other_user_tid = instance->player1_tid;
-    double seconds = ((double)(clock() - instance->game_start)) / CLOCKS_PER_SEC;
-    printf("seconds %f ",seconds);
-    fflush(stdout);
+    double seconds = (microtime() - instance->game_start) / 1000000;
     if((seconds) > client[tid].game_time_limit) {
+        game_count--;
         instance->winner_tid = other_user_tid;
         print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, YES);
         for(int count = 0; count < instances[game_id].observer_count; count++) {
@@ -188,9 +187,10 @@ int make_a_move(int tid, char* cmd) {
         }
         update_and_reset(other_user_tid, YES);
         update_and_reset(tid, NO);
+        return 0;
     } else {
-        instance->game_start = clock();
-    }*/
+        instance->game_start = microtime();
+    }
         
     //He wasn't, so upgrade the grid
     int row = (cmd[0] == 'A') ? 0 : (cmd[0] == 'B' ? 1 : 2);
