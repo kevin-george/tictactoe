@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #include <sys/time.h>
 #include "microtime.h"
 

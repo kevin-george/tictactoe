@@ -1,6 +1,8 @@
 #ifndef _H_GAME
 #define _H_GAME
 
+#include <time.h>
+
 typedef struct game {
 	//These store the user id of players
 	int player1_tid;
@@ -12,6 +14,7 @@ typedef struct game {
 	int observers[20];
 	int observer_count;
     int winner_tid;
+    clock_t game_start;
 } game;
 
 struct game instances[10];

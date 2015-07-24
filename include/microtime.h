@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #ifndef _microtime_h_
 #define _microtime_h_
 
