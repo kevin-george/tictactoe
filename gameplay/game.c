@@ -140,8 +140,136 @@ void start_match(int tid, char* cmd) {
     }
 }
 
-void print_stats(int tid) {
+void create_stats(char *user_id) {
+    FILE *file;
+    char path[50];
 
+    sprintf(path, "./gameplay/%s_stat.dat", user_id);
+    if ( (file = fopen(path, "a+")) == NULL) {
+        my_error("Cannont open user stat file");
+    } else {
+        fprintf(file, "User: %s\n", user_id);
+        fprintf(file, "Info: none\n");
+        fprintf(file, "Wins: 0\nLoses: 0\n");
+        fprintf(file, "Quiet: no\n");
+        fprintf(file, "Blocked: none\n");
+
+        fclose(file);
+    }
+}
+
+void print_stats(int tid, char *cmd) {
+    FILE *file, *login_file;
+    char path[50], line[50], user_id[USERID_LENGTH], buf[10];
+    char msg[MSG_LENGTH];
+    char *str = msg;
+
+    sscanf(cmd, "%s %s", buf, user_id);
+
+    if ( (login_file = fopen("./login/login_details.dat", "r")) == NULL) {
+        my_error("Unable to open login file");
+    } else {
+        char id[USERID_LENGTH]; char passwd[PASSWORD_LENGTH];
+        bool is_registered = false;
+        while (fscanf(login_file, "%s %s[^\n]", id, passwd) != EOF) {
+            if (strcmp(id, user_id) == 0) {
+                is_registered = true;
+                break;
+            }
+        }
+
+        fclose(login_file);
+
+        if (is_registered == false) {
+            my_write(client[tid].cli_sock, "User does not exist.", 20);
+            return;
+        }
+
+    }
+
+    sprintf(path, "./gameplay/%s_stat.dat", user_id);
+    if ( (file = fopen(path, "a+")) == NULL) {
+        my_error("Cannont open user stat file");
+    } else {
+        while (fgets(line, 50, file) != NULL) {
+            str += sprintf(str, "%s", line);
+        }
+
+        bool is_online = false;
+        for (int i = 0; i < CLIENT_SIZE; ++i) {     // Check if user is online
+            if (client[i].cli_sock != -1) {
+                if (strcmp(user_id, client[i].user_id) == 0) {
+                    is_online = true;
+                    break;
+                }
+            }
+        }
+
+        if (is_online == true)
+            str += sprintf(str, "\n%s is currently online", user_id);
+        else
+            str += sprintf(str, "\n%s is currently offline", user_id);
+
+        my_write(client[tid].cli_sock, msg, strlen(msg));
+        fclose(file);
+    }
+}
+
+void update_stats(char *user_id, char *category, char *value) {
+    // testing comment
+    FILE *old, *new;
+    char old_path[50], new_path[50];
+    char line[100];
+    char *str;
+    sprintf(old_path, "./gameplay/%s_stat.dat", user_id);
+    sprintf(new_path, "./gameplay/%s_new.dat", user_id);
+
+    if ( (new = fopen(new_path, "a+")) == NULL) {
+        my_error("Unable to open new stats file");
+    }
+
+    if ( (old = fopen(old_path, "r")) == NULL) {
+        fclose(new);
+        my_error("Unable to open new stats file");
+    } else {
+        char buf[30], buf2[30];
+        while (fgets(line, 100, old) != NULL) {
+            str = line;
+            sscanf(line, "%s %s", buf, buf2);
+            if (strcmp(buf, "Blocked:") == 0 && strcmp(category, "Blocked:") == 0) {
+                bool block = true;
+                char *pch;
+                char *blocked_users = (char*)malloc(sizeof(char)*strlen(line)+1);
+                strcpy(blocked_users, line);
+                printf("blocked_users:%s\n", blocked_users);
+                pch = strtok(blocked_users, " ");
+                str += sprintf(str, "%s ", pch);
+                while ((pch = strtok(NULL, " \n"))) {  // Check if user is to be unblocked
+                    if (strcmp(pch, "none") == 0) {
+                        continue;
+                    }
+                    if (strcmp(pch, value) != 0) {  // If on blocked list, skip user
+                        str += sprintf(str, "%s ", pch);
+                    } else {
+                        block = false;
+                    }
+                }
+
+                if (block == true)
+                    str += sprintf(str, "%s\n", value);
+
+                free(blocked_users);
+            } else if (strcmp(buf, "Info:") == 0 && strcmp(category, "Info:") == 0) {
+                if (strcmp(value, "") == 0)
+                    str += sprintf(str, "Info: none\n");
+                else
+                    str += sprintf(str, "Info: %s\n", value);
+            }else if (strcmp(buf, category) == 0) {
+                sprintf(line, "%s %s\n", category, value);
+            }
+            fprintf(new, "%s", line);
+        }
+    }
 }
 
 void update_and_reset(int tid, int won) {
