@@ -425,14 +425,20 @@ void kibitz_cmd(int tid, char *cmd) {
         char msg[MSG_LENGTH];
         sprintf(msg, "Kibitz* %s:", client[tid].user_id);
         strcat(msg, (cmd + strlen("kibitz ")));
-
-        my_write(client[player1_tid].cli_sock, msg, strlen(msg));
-        my_write(client[player2_tid].cli_sock, msg, strlen(msg));
+        
+        if (is_blocked(tid, client[player1_tid].user_id) == false)
+            my_write(client[player1_tid].cli_sock, msg, strlen(msg));
+        if (is_blocked(tid, client[player2_tid].user_id) == false)
+            my_write(client[player2_tid].cli_sock, msg, strlen(msg));
 
         for (int i = 0; i < instances[observe_match_num].observer_count; ++i) {
-            if (client[instances[observe_match_num].observers[i]].is_quiet != true && 
-                    is_blocked(tid, client[instances[observe_match_num].observers[i]].user_id) == false)
-                my_write(client[instances[observe_match_num].observers[i]].cli_sock, msg, strlen(msg));
+            if (client[instances[observe_match_num].observers[i]].is_quiet != true) {
+                if (strcmp(client[instances[observe_match_num].observers[i]].user_id, client[tid].user_id) != 0) {
+                    if (is_blocked(tid, client[instances[observe_match_num].observers[i]].user_id) == false) {
+                        my_write(client[instances[observe_match_num].observers[i]].cli_sock, msg, strlen(msg));
+                    }
+                }
+            }
         }
     } else {
         my_write(client[tid].cli_sock, "You are not observing a game", 28);

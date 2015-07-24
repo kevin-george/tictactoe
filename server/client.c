@@ -55,6 +55,14 @@ void register_cmd(int fd, char *cmd) {
         my_write(fd, msg, strlen(msg));
         create_mail_file(user_id);
         create_stats(user_id);
+        // Create Blocked file
+        FILE *f;
+        char path[50];
+        sprintf(path, "./block/%s.dat", user_id);
+        if ( (f = fopen(path, "a+")) == NULL)
+            my_error("Unable to open block file in register cmd");
+        
+        fclose(f);
     } else {
         strcpy(msg, "\nRegistration Failed!");
         my_write(fd, msg, strlen(msg));
@@ -330,6 +338,7 @@ bool is_blocked(int tid, char *user_id) {
     FILE *file;
     char path[50];
     sprintf(path, "./block/%s.dat", user_id); 
+    printf("path:%s\n", path);
     if ( (file = fopen(path, "r")) == NULL) {
         my_error("Unable to open check_blocked file");
     } else {
