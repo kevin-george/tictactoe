@@ -489,6 +489,29 @@ void info_cmd(int tid, char *cmd) {
     my_write(client[tid].cli_sock, "Info updated.", 13);
 }
 
+void check_quiet(int tid) {
+    FILE *file;
+    char path[50], line[100];
+
+    sprintf(path, "./gameplay/%s_stat.dat", client[tid].user_id);
+    if ( (file = fopen(path, "r")) == NULL) {
+        my_error("Cannont open user stat file");
+    } else {
+        char buf[50], buf2[50];
+        while (fgets(line, 50, file) != NULL) {
+            sscanf(line, "%s %s", buf, buf2);
+            if (strcmp(buf, "Quiet:") == 0) {
+                if (strcmp(buf2, "Yes") == 0)
+                    client[tid].is_quiet = true;
+                else
+                    client[tid].is_quiet = false;
+                break;
+            }     
+        }
+        fclose(file);
+    }
+}
+
 
 
 

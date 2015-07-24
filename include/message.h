@@ -19,5 +19,5 @@ void kibitz_cmd(int tid, char *cmd);
 void comment_cmd(int tid, char *cmd);
 void check_messages(int tid);
 void info_cmd(int tid, char *cmd);
-
+void check_quiet(int tid);
 #endif

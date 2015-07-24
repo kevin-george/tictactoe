@@ -248,8 +248,10 @@ void *start_client(void *arg) {
         reset_client(tid);
 
         // check messages
-        if(strcmp(get_userid(tid), "guest") != 0)
+        if(strcmp(get_userid(tid), "guest") != 0) {
             check_messages(tid);
+            check_quiet(tid);
+        }
 
         do {  // Game loop
             sprintf(msg, "\n<%s: %d> ", get_userid(tid), command_counter);
@@ -280,8 +282,6 @@ void *start_client(void *arg) {
 
 
 void reset_client(int tid) {
-    update_stats(client[tid].user_id, "Quiet:", "No");
-    client[tid].is_quiet = false;
     client[tid].game_on = false;
     client[tid].game_turn = false;
     client[tid].game_id = -1;
