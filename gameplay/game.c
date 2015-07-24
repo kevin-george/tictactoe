@@ -261,7 +261,6 @@ void update_stats(char *user_id, char *category, char *value) {
                 char *pch;
                 char *blocked_users = (char*)malloc(sizeof(char)*strlen(line)+1);
                 strcpy(blocked_users, line);
-                printf("blocked_users:%s\n", blocked_users);
                 pch = strtok(blocked_users, " ");
                 str += sprintf(str, "%s ", pch);
                 while ((pch = strtok(NULL, " \n"))) {  // Check if user is to be unblocked
@@ -287,8 +286,13 @@ void update_stats(char *user_id, char *category, char *value) {
             }else if (strcmp(buf, category) == 0) {
                 sprintf(line, "%s %s\n", category, value);
             }
+            printf("line:%s\n", line);
             fprintf(new, "%s", line);
         }
+        fclose(old);
+        fclose(new);
+        remove(old_path);
+        rename(new_path, old_path);
     }
 }
 

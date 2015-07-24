@@ -323,5 +323,24 @@ bool check_online_status(int tid, char *user_id) {
     return false;
 }
 
+bool is_blocked(int tid, char *user_id) {
+    FILE *file;
+    char path[50];
+    sprintf(path, "./block/%s.dat", user_id); 
+    if ( (file = fopen(path, "r")) == NULL) {
+        my_error("Unable to open check_blocked file");
+    } else {
+        char id[USERID_LENGTH];
+        while (fscanf(file, "%s[^\n]", id) != EOF) {
+            if (strcmp(id, client[tid].user_id) == 0) {
+                return true;
+            }
+        }
+        fclose(file);
+        return false;
+    }
+    return false;
+}
+
 
 

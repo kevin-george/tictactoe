@@ -31,5 +31,6 @@ void close_client(int tid);
 void *start_client(void *arg);
 void reset_client(int tid);
 bool check_online_status(int tid, char *user_id);
+bool is_blocked(int tid, char *user_id);
 
 #endif
