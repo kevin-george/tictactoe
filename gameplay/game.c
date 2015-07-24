@@ -23,7 +23,7 @@ void print_game(int player1, int player2, int first_view, int result, int time_o
         else
             str += sprintf(str, "\nBlack:\t\t%s\t\tWhite:\t\t%s"
                     , client[player1].user_id, client[player2].user_id);
-        str += sprintf(str, "\n  Time:\t%.0f seconds\t\t  Time:\t%.0f seconds\n\n"
+        str += sprintf(str, "\n Time:\t%.0f seconds\t\t Time:\t%.0f seconds\n\n"
                 , client[player1].game_time_limit, client[player2].game_time_limit);
     }
 
@@ -70,11 +70,30 @@ void list_games(int tid) {
     my_write(client[tid].cli_sock, message, strlen(message));
 }
 
-void start_match(int tid, char* cmd) {
+void start_match(int tid, char* cmd, int argc) {
     char id[USERID_LENGTH] = "";
     char type[2] = "";
+    double time1 = 0.0, time2 = 0.0;
     //Break the command down
-    sscanf(cmd, "%*s %s %s", id, type);
+    if(argc == 2) {
+        //If you're invited, you better follow commands
+        if(client[tid].game_on)
+            return;
+        sscanf(cmd, "%*s %s", id);
+        strcpy(type, "b");
+        time1 = time2 = 300.0;
+    } else if(argc == 3) {
+        //If you're invited, you better follow commands
+        if(client[tid].game_on)
+            return;
+        sscanf(cmd, "%*s %s %s", id, type);
+        time1 = time2 = 300.0;
+    } else if(argc == 5) {
+        char time1_str[5], time2_str[5];
+        sscanf(cmd, "%*s %s %s %s %s", id, type, time1_str, time2_str);
+        time1 = atof(time1_str);
+        time2 = atof(time2_str);
+    }
     //Check if the user is trying to start a match with himself
     if(strcmp(id, client[tid].user_id) == 0) {
         char message[MSG_LENGTH];
@@ -94,8 +113,8 @@ void start_match(int tid, char* cmd) {
                         client[i].game_on = true;
                         char p_type = (type[0] == 'w') ? 'b' : 'w';
                         char message[MSG_LENGTH];
-                        sprintf(message, "%s invites you for a game <Please type -> match %s %c>."
-                                , client[tid].user_id, client[tid].user_id, p_type);
+                        sprintf(message, "%s invites you for a game <Please type -> match %s %c %0.f %0.f>."
+                                , client[tid].user_id, client[tid].user_id, p_type, time1, time2);
                         my_write(client[i].cli_sock, message, strlen(message));
                     } else {
                         //I'm the invitee, so game on!
@@ -114,7 +133,8 @@ void start_match(int tid, char* cmd) {
                         //Setting the game instance
                         client[i].game_id = client[tid].game_id = game_count;
                         //Hardcoding time limit for now
-                        client[i].game_time_limit = client[tid].game_time_limit = 5.0;
+                        client[i].game_time_limit = time2;
+                        client[tid].game_time_limit = time1;
                         //Black gets to go first
                         if(client[tid].player_type == 'b')
                             client[tid].game_turn = true;
@@ -288,9 +308,9 @@ void update_and_reset(int tid, int won) {
 }
 
 int make_a_move(int tid, char* cmd) {
+    char message[MSG_LENGTH] = "";
     //Is it even your turn?
     if(!client[tid].game_turn) {
-        char message[MSG_LENGTH];
         strcpy(message, "It's not your turn.");
         my_write(client[tid].cli_sock, message, strlen(message));
         return 0;
@@ -315,7 +335,7 @@ int make_a_move(int tid, char* cmd) {
     if((seconds) > client[tid].game_time_limit) {
         game_count--;
         instance->winner_tid = other_user_tid;
-        print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, YES);
+        print_game(tid, other_user_tid, NO, YES, YES);
         for(int count = 0; count < instances[game_id].observer_count; count++) {
             print_game(instances[game_id].observers[count], -1, NO, YES, YES);
         }
@@ -329,6 +349,11 @@ int make_a_move(int tid, char* cmd) {
     //He wasn't, so upgrade the grid
     int row = (cmd[0] == 'A') ? 0 : (cmd[0] == 'B' ? 1 : 2);
     int column = (cmd[1] == '1') ? 0 : (cmd[1] == '2' ? 1 : 2);
+    if(instance->game_grid[row][column] != '.') {
+        strcpy(message, "This spot is already taken.");
+        my_write(client[tid].cli_sock, message, strlen(message));
+        return 0;
+    }
     instance->game_grid[row][column] = client[tid].player_type;
     instance->no_of_moves++;
 

@@ -127,9 +127,13 @@ void run_command(int tid, char* cmd) {
     } else if(starts_with(cmd, "game") == 0) {
         list_games(tid);
     } else if(starts_with(cmd, "match") == 0) {
-        if(check_args(cmd, 3) == true) {
-            start_match(tid, cmd);
-        } 
+        if(check_args(cmd, 2) == true) {
+            start_match(tid, cmd, 2);
+        } else if(check_args(cmd, 3) == true) {
+            start_match(tid, cmd, 3);
+        } else if(check_args(cmd, 5) == true) {
+            start_match(tid, cmd, 5);
+        }
     } else if (starts_with(cmd, "observe") == 0) {
         if (check_args(cmd, 2) == true)
             observe_cmd(tid, cmd);
@@ -158,6 +162,25 @@ void run_command(int tid, char* cmd) {
         //This can be a game move
         //First check if a game is in progress
         if(cmd[0] != '\0') {
+            if(strcmp(cmd, "quit") == 0 || strcmp(cmd, "exit") == 0) {
+                if(client[tid].game_on) {
+                    //The user is forfeiting the game
+                    game_count--;
+                    int game_id = client[tid].game_id;
+                    int other_user_tid;
+                    if(tid == instances[game_id].player1_tid)
+                        other_user_tid = instances[game_id].player2_tid;
+                    else
+                        other_user_tid = instances[game_id].player1_tid;
+                    instances[game_id].winner_tid = other_user_tid;
+                    print_game(tid, other_user_tid, 0, 1, 0);
+                    for(int count = 0; count < instances[game_id].observer_count; count++) {
+                        print_game(instances[game_id].observers[count], -1, 0, 1, 0);
+                    }
+                    update_and_reset(other_user_tid, 1);
+                    update_and_reset(tid, 0);
+                }
+            }
             if(client[tid].game_id >= 0) {
                 //If yes, perform move
                 if(make_a_move(tid, cmd) == -1) {
@@ -245,7 +268,7 @@ void *start_client(void *arg) {
         my_write(cli_sock, "\n\n", 2);
 
         // new client, not observing anything. 
-        reset_client(tid);
+        //reset_client(tid);
 
         // check messages
         if(strcmp(get_userid(tid), "guest") != 0) {
