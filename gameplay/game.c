@@ -11,7 +11,6 @@
 
 #define YES 1
 #define NO 0
-
 void print_game(int player1, int player2, int first_view, int result, int time_out, int gameid) {
     char game_state[1500] = "";
     char *str = game_state;
@@ -98,6 +97,7 @@ void print_game(int player1, int player2, int first_view, int result, int time_o
         my_write(client[player1].cli_sock, game_state, strlen(game_state));
     }
 }
+
 
 void list_games(int tid) {
     char message[MSG_LENGTH] = "";
@@ -201,6 +201,7 @@ void start_match(int tid, char* cmd, int argc) {
     }
 }
 
+
 void create_stats(char *user_id) {
     FILE *file;
     char path[50];
@@ -302,7 +303,6 @@ void update_stats(char *user_id, char *category, char *value) {
                 char *pch;
                 char *blocked_users = (char*)malloc(sizeof(char)*strlen(line)+1);
                 strcpy(blocked_users, line);
-                printf("blocked_users:%s\n", blocked_users);
                 pch = strtok(blocked_users, " ");
                 str += sprintf(str, "%s ", pch);
                 while ((pch = strtok(NULL, " \n"))) {  // Check if user is to be unblocked
@@ -328,10 +328,11 @@ void update_stats(char *user_id, char *category, char *value) {
             }else if (strcmp(buf, category) == 0) {
                 sprintf(line, "%s %s\n", category, value);
             }
+            printf("line:%s\n", line);
             fprintf(new, "%s", line);
         }
-        fclose(new);
         fclose(old);
+        fclose(new);
         remove(old_path);
         rename(new_path, old_path);
     }
@@ -351,7 +352,6 @@ void update_and_reset(int tid, int won) {
     update_stats(client[tid].user_id, "Wins:", num_won);
     update_stats(client[tid].user_id, "Loses:", num_loss);
 }
-
 int make_a_move(int tid, char* cmd) {
     char message[MSG_LENGTH] = "";
     //Is it even your turn?
@@ -557,3 +557,4 @@ int make_a_move(int tid, char* cmd) {
 
     return 0;
 }
+
