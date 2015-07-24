@@ -217,6 +217,7 @@ void print_stats(int tid, char *cmd) {
 }
 
 void update_stats(char *user_id, char *category, char *value) {
+    // testing comment
     FILE *old, *new;
     char old_path[50], new_path[50];
     char line[100];
