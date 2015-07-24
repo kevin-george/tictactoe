@@ -17,7 +17,7 @@ typedef struct client_t{
     bool game_on;
     char player_type;
     int game_id;
-    int game_time_limit;
+    double game_time_limit;
     bool game_turn;
     int games_played;
     int games_won;
