@@ -289,6 +289,10 @@ void update_stats(char *user_id, char *category, char *value) {
             }
             fprintf(new, "%s", line);
         }
+        fclose(new);
+        fclose(old);
+        remove(old_path);
+        rename(new_path, old_path);
     }
 }
 
