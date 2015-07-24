@@ -391,6 +391,7 @@ void observe_cmd(int tid, char *cmd) {
 
         sprintf(msg, "Observing game %d", inst_idx);
         my_write(client[tid].cli_sock, msg, strlen(msg));
+        print_game(tid, -1, 0, 0, 0, inst_idx);
     } else {
         my_write(client[tid].cli_sock, "Unobserve before observing another game", 39);
     }
