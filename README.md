@@ -6,4 +6,4 @@ Use any TCP client like telnet to connect on designated port.
 1. kibitz - Observers alone can message to other observers & the players of the game
 2. ' - Players sends message to the other player of the game 
 3. We give each player <time_limit> for every move. Time limit resets after each turn.
-4. Observers aren't shown game header
+4. Stats - wins and losses are reset each login
