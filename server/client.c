@@ -54,6 +54,7 @@ void register_cmd(int fd, char *cmd) {
         strcpy(msg, "\nRegistration Completed!");
         my_write(fd, msg, strlen(msg));
         create_mail_file(user_id);
+        create_stats(user_id);
     } else {
         strcpy(msg, "\nRegistration Failed!");
         my_write(fd, msg, strlen(msg));
@@ -141,6 +142,16 @@ void run_command(int tid, char* cmd) {
     } else if (starts_with(cmd, "passwd") == 0) {
         if (check_args(cmd, 2) == true)
             change_password(tid, cmd);
+        else
+            my_write(cli_sock, "Incorrect format", 16);
+    } else if (starts_with(cmd, "info") == 0) {
+        if (strcmp(cmd, "info") != 0)
+            info_cmd(tid, cmd);
+        else
+            my_write(cli_sock, "Incorrect format", 16);
+    } else if (starts_with(cmd, "stats") == 0) {
+        if (check_args(cmd, 2) == true)
+            print_stats(tid, cmd);
         else
             my_write(cli_sock, "Incorrect format", 16);
     }else {
@@ -269,6 +280,7 @@ void *start_client(void *arg) {
 
 
 void reset_client(int tid) {
+    update_stats(client[tid].user_id, "Quiet:", "No");
     client[tid].is_quiet = false;
     client[tid].game_on = false;
     client[tid].game_turn = false;

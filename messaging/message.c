@@ -57,11 +57,13 @@ void shout_cmd(int tid, char *cmd) {
 void quiet_cmd(int tid) {
     client[tid].is_quiet = true;
     my_write(client[tid].cli_sock, "Enter quiet mode.", 17);
+    update_stats(client[tid].user_id, "Quiet:", "Yes");
 }
 
 void nonquiet_cmd(int tid) {
     client[tid].is_quiet = false;
     my_write(client[tid].cli_sock, "Enter nonquiet mode.", 20);
+    update_stats(client[tid].user_id, "Quiet:", "No");
 }
 
 void block_cmd(int tid, char *cmd) {    // Not tested
@@ -90,6 +92,7 @@ void block_cmd(int tid, char *cmd) {    // Not tested
             fprintf(in, "%s\n", user_id);
             sprintf(msg, "User %s blocked.", user_id);
             my_write(client[tid].cli_sock, msg, strlen(msg));
+            update_stats(client[tid].user_id, "Blocked:", user_id);
         }
     }
 
@@ -128,7 +131,9 @@ void unblock_cmd(int tid, char *cmd) {  // Not tested
 
         if (is_blocked == false) {
             sprintf(msg, "User %s was not blocked", user_id);
-            my_write(client[tid].cli_sock,msg, strlen(msg));
+            my_write(client[tid].cli_sock, msg, strlen(msg));
+        } else {
+            update_stats(client[tid].user_id, "Blocked:", user_id);
         }
         
         fclose(c_in);
@@ -477,6 +482,12 @@ void check_messages(int tid) {
     }
 }
 
+void info_cmd(int tid, char *cmd) {
+    char msg[MSG_LENGTH] = "";
+    strcpy(msg, (cmd + strlen("info ")));
+    update_stats(client[tid].user_id, "Info:", msg);
+    my_write(client[tid].cli_sock, "Info updated.", 13);
+}
 
 
 
