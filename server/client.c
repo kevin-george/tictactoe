@@ -88,7 +88,7 @@ void run_command(int tid, char* cmd) {
         register_cmd(cli_sock, cmd);
     } else if(strcmp(cmd, "who") == 0) {
         who_cmd(cli_sock);
-    } else if(strcmp(cmd, "help") == 0) {
+    } else if(strcmp(cmd, "help") == 0 || strcmp(cmd, "?") == 0) {
         print_help(cli_sock);
     } else if(starts_with(cmd, "tell") == 0) {
         tell_cmd(tid, cmd);
@@ -158,11 +158,13 @@ void run_command(int tid, char* cmd) {
             print_stats(tid, cmd);
         else
             my_write(cli_sock, "Incorrect format", 16);
-    }else {
+    } else if(starts_with(cmd, "refresh") == 0) {
+        print_game(tid, -2, 1, 0, 0, -1);
+    } else {
         //This can be a game move
         //First check if a game is in progress
         if(cmd[0] != '\0') {
-            if(strcmp(cmd, "quit") == 0 || strcmp(cmd, "exit") == 0) {
+            if(strcmp(cmd, "quit") == 0 || strcmp(cmd, "exit") == 0 || strcmp(cmd, "resign") == 0) {
                 if(client[tid].game_on) {
                     //The user is forfeiting the game
                     game_count--;
@@ -173,13 +175,14 @@ void run_command(int tid, char* cmd) {
                     else
                         other_user_tid = instances[game_id].player1_tid;
                     instances[game_id].winner_tid = other_user_tid;
-                    print_game(tid, other_user_tid, 0, 1, 0);
+                    print_game(tid, other_user_tid, 0, 1, 0, -1);
                     for(int count = 0; count < instances[game_id].observer_count; count++) {
-                        print_game(instances[game_id].observers[count], -1, 0, 1, 0);
+                        print_game(instances[game_id].observers[count], -1, 0, 1, 0, game_id);
                     }
                     update_and_reset(other_user_tid, 1);
                     update_and_reset(tid, 0);
                 }
+                return;
             }
             if(client[tid].game_id >= 0) {
                 //If yes, perform move
@@ -319,25 +322,6 @@ bool check_online_status(int tid, char *user_id) {
                 return true;
             }
         }
-    }
-    return false;
-}
-
-bool is_blocked(int tid, char *user_id) {
-    FILE *file;
-    char path[50];
-    sprintf(path, "./block/%s.dat", user_id); 
-    if ( (file = fopen(path, "r")) == NULL) {
-        my_error("Unable to open check_blocked file");
-    } else {
-        char id[USERID_LENGTH];
-        while (fscanf(file, "%s[^\n]", id) != EOF) {
-            if (strcmp(id, client[tid].user_id) == 0) {
-                return true;
-            }
-        }
-        fclose(file);
-        return false;
     }
     return false;
 }

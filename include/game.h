@@ -20,7 +20,7 @@ struct game instances[10];
 int game_count;
 
 void update_and_reset(int tid, int won);
-void print_game(int tid1, int tid2, int first, int result, int time_out);
+void print_game(int tid1, int tid2, int first, int result, int time_out, int gameid);
 void list_games(int cli_sock);
 void start_match(int tid, char* cmd, int argc); 
 int make_a_move(int cli_sock, char* cmd);

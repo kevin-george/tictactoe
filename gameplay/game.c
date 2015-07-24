@@ -12,7 +12,7 @@
 #define YES 1
 #define NO 0
 
-void print_game(int player1, int player2, int first_view, int result, int time_out) {
+void print_game(int player1, int player2, int first_view, int result, int time_out, int gameid) {
     char game_state[1500] = "";
     char *str = game_state;
     //Only first time view gets this
@@ -23,12 +23,54 @@ void print_game(int player1, int player2, int first_view, int result, int time_o
         else
             str += sprintf(str, "\nBlack:\t\t%s\t\tWhite:\t\t%s"
                     , client[player1].user_id, client[player2].user_id);
-        str += sprintf(str, "\n Time:\t%.0f seconds\t\t Time:\t%.0f seconds\n\n"
+        if(player2 == -2) {
+            double time1, time2;
+            if(client[player1].game_id < 0) {
+                //This is an observer
+            } else {
+                //This is a player
+                int game_id = client[player1].game_id;
+                int player_type = client[player1].player_type;
+                int other_tid;
+                if(player1 == instances[game_id].player1_tid)
+                    other_tid = instances[game_id].player2_tid;
+                else
+                    other_tid = instances[game_id].player1_tid;
+                if(player_type == 'b') {
+                    if(client[player1].game_turn) {
+                        time1 = client[player1].game_time_limit - 
+                            (microtime() - instances[game_id].game_start) / 1000000;
+                        time2 = client[other_tid].game_time_limit;
+                    } else {
+                        time1 = client[player1].game_time_limit;
+                        time2 = client[other_tid].game_time_limit - 
+                            (microtime() - instances[game_id].game_start) / 1000000;
+                    }
+                } else {
+                    if(client[player1].game_turn) {
+                        time2 = client[player1].game_time_limit - 
+                            (microtime() - instances[game_id].game_start) / 1000000;
+                        time1 = client[other_tid].game_time_limit;
+                    } else {
+                        time2 = client[player1].game_time_limit;
+                        time1 = client[other_tid].game_time_limit - 
+                            (microtime() - instances[game_id].game_start) / 1000000;
+                    }
+                }
+            }
+            str += sprintf(str, "\n Time:\t%.0f seconds\t\t Time:\t%.0f seconds\n\n", time1, time2);
+        } else {
+            str += sprintf(str, "\n Time:\t%.0f seconds\t\t Time:\t%.0f seconds\n\n"
                 , client[player1].game_time_limit, client[player2].game_time_limit);
+        }
     }
 
     //To be replaced by actual game grid
-    int game_id = client[player1].game_id;
+    int game_id;
+    if(gameid == -1)
+        game_id = client[player1].game_id;
+    else
+        game_id = gameid;
     game *instance = &instances[game_id];
     str += sprintf(str, "\n    1  2  3");
     str += sprintf(str, "\nA   %c  %c  %c"
@@ -46,9 +88,8 @@ void print_game(int player1, int player2, int first_view, int result, int time_o
         } else
             str += sprintf(str, "\nThe game was a tie");
     }
-    fflush(stdout);
 
-    if(player2 != -1) {
+    if(player2 > -1) {
         //This is for player1 & player2
         my_write(client[player1].cli_sock, game_state, strlen(game_state)); 
         my_write(client[player2].cli_sock, game_state, strlen(game_state));
@@ -144,7 +185,7 @@ void start_match(int tid, char* cmd, int argc) {
                         instances[game_count].player1_tid = tid;
                         instances[game_count].player2_tid = i;
                         //Print game board
-                        print_game(i, tid, YES, NO, NO);
+                        print_game(i, tid, YES, NO, NO, -1);
                         //Timer starts for Black
                         instances[game_count].game_start = microtime();
                     }
@@ -261,6 +302,7 @@ void update_stats(char *user_id, char *category, char *value) {
                 char *pch;
                 char *blocked_users = (char*)malloc(sizeof(char)*strlen(line)+1);
                 strcpy(blocked_users, line);
+                printf("blocked_users:%s\n", blocked_users);
                 pch = strtok(blocked_users, " ");
                 str += sprintf(str, "%s ", pch);
                 while ((pch = strtok(NULL, " \n"))) {  // Check if user is to be unblocked
@@ -286,11 +328,10 @@ void update_stats(char *user_id, char *category, char *value) {
             }else if (strcmp(buf, category) == 0) {
                 sprintf(line, "%s %s\n", category, value);
             }
-            printf("line:%s\n", line);
             fprintf(new, "%s", line);
         }
-        fclose(old);
         fclose(new);
+        fclose(old);
         remove(old_path);
         rename(new_path, old_path);
     }
@@ -339,9 +380,9 @@ int make_a_move(int tid, char* cmd) {
     if((seconds) > client[tid].game_time_limit) {
         game_count--;
         instance->winner_tid = other_user_tid;
-        print_game(tid, other_user_tid, NO, YES, YES);
+        print_game(tid, other_user_tid, NO, YES, YES, -1);
         for(int count = 0; count < instances[game_id].observer_count; count++) {
-            print_game(instances[game_id].observers[count], -1, NO, YES, YES);
+            print_game(instances[game_id].observers[count], -1, NO, YES, YES, game_id);
         }
         update_and_reset(other_user_tid, YES);
         update_and_reset(tid, NO);
@@ -431,9 +472,9 @@ int make_a_move(int tid, char* cmd) {
         if(client[instance->player1_tid].player_type == 'b') {
             instance->winner_tid = instance->player1_tid;
             
-            print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, NO);
+            print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, NO, -1);
             for(int count = 0; count < instances[game_id].observer_count; count++) {
-                print_game(instances[game_id].observers[count], -1, NO, YES, NO);
+                print_game(instances[game_id].observers[count], -1, NO, YES, NO, game_id);
             }
 
             update_and_reset(instance->player1_tid, YES);
@@ -441,9 +482,9 @@ int make_a_move(int tid, char* cmd) {
         } else {
             instance->winner_tid = instance->player2_tid;
             
-            print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, NO);
+            print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, NO, -1);
             for(int count = 0; count < instances[game_id].observer_count; count++) {
-                print_game(instances[game_id].observers[count], -1, NO, YES, NO);
+                print_game(instances[game_id].observers[count], -1, NO, YES, NO, game_id);
             }
 
             update_and_reset(instance->player2_tid, YES);
@@ -467,9 +508,9 @@ int make_a_move(int tid, char* cmd) {
         if(client[instance->player1_tid].player_type == 'w') {
             instance->winner_tid = instance->player1_tid;
 
-            print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, NO);
+            print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, NO, -1);
             for(int count = 0; count < instances[game_id].observer_count; count++) {
-                print_game(instances[game_id].observers[count], -1, NO, YES, NO);
+                print_game(instances[game_id].observers[count], -1, NO, YES, NO, game_id);
             }
 
             update_and_reset(instance->player1_tid, YES);
@@ -477,9 +518,9 @@ int make_a_move(int tid, char* cmd) {
         } else {
             instance->winner_tid = instance->player2_tid;
             
-            print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, NO);
+            print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, NO, -1);
             for(int count = 0; count < instances[game_id].observer_count; count++) {
-                print_game(instances[game_id].observers[count], -1, NO, YES, NO);
+                print_game(instances[game_id].observers[count], -1, NO, YES, NO, game_id);
             }
             
             update_and_reset(instance->player2_tid, YES);
@@ -495,9 +536,9 @@ int make_a_move(int tid, char* cmd) {
         instance->winner_tid = -1; 
         update_and_reset(instance->player1_tid, NO);
         update_and_reset(instance->player2_tid, NO);
-        print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, NO);
+        print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, YES, NO, -1);
         for(int count = 0; count < instances[game_id].observer_count; count++) {
-            print_game(instances[game_id].observers[count], -1, NO, YES, NO);
+            print_game(instances[game_id].observers[count], -1, NO, YES, NO, game_id);
         }
     } else {
         //The game is still on, So switch turns
@@ -507,10 +548,10 @@ int make_a_move(int tid, char* cmd) {
         else
             client[instance->player1_tid].game_turn = true;
         //Print to players
-        print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, NO, NO);
+        print_game(instances[game_id].player1_tid, instances[game_id].player2_tid, NO, NO, NO, -1);
         //And then print to observers
         for(int count = 0; count < instances[game_id].observer_count; count++) {
-            print_game(instances[game_id].observers[count], -1, NO, NO, NO);
+            print_game(instances[game_id].observers[count], -1, NO, NO, NO, game_id);
         }
     }
 
