@@ -372,7 +372,7 @@ void observe_cmd(int tid, char *cmd) {
         sscanf(cmd, "%s %d", buf, &inst_idx);
 
         observer_count = instances[inst_idx].observer_count++;
-        instances[inst_idx].observers[observer_count][0] = tid;
+        instances[inst_idx].observers[observer_count] = tid;
 
         client[tid].observe_match_num = inst_idx;
         client[tid].is_observing = true;
@@ -390,8 +390,8 @@ void unobserve_cmd(int tid) {
     int observer_count = instances[match_num].observer_count;
     if (client[tid].is_observing == true) {
         for (int i = 0; i < observer_count; ++i) {
-            if (instances[match_num].observers[i][0] == tid) {
-                instances[match_num].observers[i][0] = -1;
+            if (instances[match_num].observers[i] == tid) {
+                instances[match_num].observers[i] = -1;
                 client[tid].observe_match_num = -1;
                 client[tid].is_observing = false;
             }
@@ -417,7 +417,7 @@ void kibitz_cmd(int tid, char *cmd) {
         my_write(client[player2_tid].cli_sock, msg, strlen(msg));
 
         for (int i = 0; i < instances[observe_match_num].observer_count; ++i) {
-            my_write(client[instances[observe_match_num].observers[i][0]].cli_sock, msg, strlen(msg));
+            my_write(client[instances[observe_match_num].observers[i]].cli_sock, msg, strlen(msg));
         }
     } else {
         my_write(client[tid].cli_sock, "You are not observing a game", 28);
@@ -438,7 +438,7 @@ void comment_cmd(int tid, char *cmd) {
         my_write(client[player2_tid].cli_sock, msg, strlen(msg));
 
         for (int i = 0; i < instances[match_num].observer_count; ++i) {
-            my_write(client[instances[match_num].observers[i][0]].cli_sock, msg, strlen(msg));
+            my_write(client[instances[match_num].observers[i]].cli_sock, msg, strlen(msg));
         }
     } else {
         my_write(client[tid].cli_sock, "You are not playing a game", 26);
